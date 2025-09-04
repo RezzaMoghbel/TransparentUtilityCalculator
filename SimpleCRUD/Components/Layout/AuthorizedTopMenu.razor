@@ -1,0 +1,47 @@
+﻿@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthProvider
+
+
+
+<AuthorizeView>
+    <Authorized>
+        <div class="nav-item px-3">
+            <form action="Account/Logout" method="post" class="nav-link-top">
+                <AntiforgeryToken />
+                <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                <button type="submit" class="nav-link nav-link-top">
+                    <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+                </button>
+            </form>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+
+
+@code {
+    private string? currentUrl;
+    private string? userName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userName = authState.User.Identity?.Name;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

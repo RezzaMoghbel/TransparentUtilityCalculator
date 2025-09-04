@@ -1,0 +1,108 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Name>SimpleCRUD.Database</Name>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>4.1</ProjectVersion>
+    <ProjectGuid>{8e09fe46-e6ee-4a8a-8d08-e77dbefff07a}</ProjectGuid>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql160DatabaseSchemaProvider</DSP>
+    <OutputType>Database</OutputType>
+    <RootPath />
+    <RootNamespace>SimpleCRUD.Database</RootNamespace>
+    <AssemblyName>SimpleCRUD.Database</AssemblyName>
+    <ModelCollation>1033, CI</ModelCollation>
+    <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
+    <DeployToDatabase>True</DeployToDatabase>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetLanguage>CS</TargetLanguage>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <SqlServerVerification>False</SqlServerVerification>
+    <IncludeCompositeObjects>True</IncludeCompositeObjects>
+    <TargetDatabaseSet>True</TargetDatabaseSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
+    <SSDTExists Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets')">True</SSDTExists>
+    <VisualStudioVersion Condition="'$(SSDTExists)' == ''">11.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Condition="'$(SQLDBExtensionsRefPath)' != ''" Project="$(SQLDBExtensionsRefPath)\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <ItemGroup>
+    <Folder Include="Properties" />
+    <Folder Include="dbo\" />
+    <Folder Include="dbo\Tables\" />
+    <Folder Include="Security\" />
+    <Folder Include="utility\" />
+    <Folder Include="utility\Tables\" />
+    <Folder Include="utility\Scripts" />
+    <Folder Include="utility\Stored Procedures\" />
+    <Folder Include="dbo\Stored Procedures\" />
+    <Folder Include="identity\" />
+    <Folder Include="identity\Stored Procedures\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="dbo\Tables\UtilityProviders.sql" />
+    <Build Include="dbo\Tables\IPWhitelists.sql" />
+    <Build Include="dbo\Tables\Buildings.sql" />
+    <Build Include="dbo\Tables\AspNetUserTokens.sql" />
+    <Build Include="dbo\Tables\AspNetUsers.sql" />
+    <Build Include="dbo\Tables\AspNetUserRoles.sql" />
+    <Build Include="dbo\Tables\AspNetUserLogins.sql" />
+    <Build Include="dbo\Tables\AspNetUserClaims.sql" />
+    <Build Include="dbo\Tables\AspNetRoles.sql" />
+    <Build Include="dbo\Tables\AspNetRoleClaims.sql" />
+    <Build Include="dbo\Tables\AccessLevels.sql" />
+    <Build Include="dbo\Tables\__EFMigrationsHistory.sql" />
+    <Build Include="Security\UtilityCalculator.sql" />
+    <Build Include="Security\RoleMemberships.sql" />
+    <Build Include="Security\utility.sql" />
+    <Build Include="utility\Tables\UtilityType.sql" />
+    <Build Include="utility\Tables\UtilityTypeAdv.sql" />
+    <Build Include="utility\Tables\UtilityReadings.sql" />
+    <Build Include="utility\Stored Procedures\UtilityReadings_Update.sql" />
+    <Build Include="utility\Stored Procedures\UtilityReadings_ListByDate.sql" />
+    <Build Include="utility\Stored Procedures\UtilityReadings_Insert.sql" />
+    <Build Include="utility\Stored Procedures\UtilityReadings_GetById.sql" />
+    <Build Include="utility\Stored Procedures\UtilityReadings_Delete.sql" />
+    <Build Include="utility\Stored Procedures\UtilityType_GetAll.sql" />
+    <Build Include="utility\Stored Procedures\rpt_SpendOverAll_ByType.sql" />
+    <Build Include="utility\Stored Procedures\rpt_SpendEachMonth_ByType.sql" />
+    <Build Include="utility\Stored Procedures\rpt_SpendByMonth_ByType.sql" />
+    <Build Include="utility\Stored Procedures\rpt_MonthlyUsage_ByType.sql" />
+    <Build Include="utility\Stored Procedures\rpt_MonthlyAmount_ByType.sql" />
+    <Build Include="dbo\Stored Procedures\UtilityProviders_GetActive.sql" />
+    <Build Include="dbo\Stored Procedures\Buildings_GetActive.sql" />
+    <Build Include="identity\Stored Procedures\ActiveUser_GetExtrasInfo_ByUserName.sql" />
+    <Build Include="identity\Stored Procedures\ActiveUser_GetByUserName.sql" />
+    <Build Include="Security\identity.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <PostDeploy Include="utility\Scripts\Script.PostDeployment.UtilityType.sql" />
+    <None Include="utility\Scripts\Script.PostDeploymentUtilityTypeAdv.sql" />
+  </ItemGroup>
+</Project>

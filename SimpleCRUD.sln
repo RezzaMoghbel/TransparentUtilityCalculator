@@ -1,0 +1,62 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35825.156
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleCRUD", "SimpleCRUD\SimpleCRUD.csproj", "{5C920125-034A-4A65-982E-20612D2B027E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleCRUD.DTO", "SimpleCRUD.DTO\SimpleCRUD.DTO.csproj", "{7DC9F484-6B5A-4761-AF66-DD4ABA16276D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleCRUD.Engine", "SimpleCRUD.Engine\SimpleCRUD.Engine.csproj", "{D53C37FB-8CED-495B-98A4-C6BE388A5D23}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleCRUD.Data", "SimpleCRUD.Data\SimpleCRUD.Data.csproj", "{1984AF4B-7F08-47C3-85E2-1B01C1B603AD}"
+EndProject
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "SimpleCRUD.Database", "SimpleCRUD.Database\SimpleCRUD.Database.sqlproj", "{8E09FE46-E6EE-4A8A-8D08-E77DBEFFF07A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Development|Any CPU = Development|Any CPU
+		Production|Any CPU = Production|Any CPU
+		Staging|Any CPU = Staging|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5C920125-034A-4A65-982E-20612D2B027E}.Development|Any CPU.ActiveCfg = Development|Any CPU
+		{5C920125-034A-4A65-982E-20612D2B027E}.Development|Any CPU.Build.0 = Development|Any CPU
+		{5C920125-034A-4A65-982E-20612D2B027E}.Production|Any CPU.ActiveCfg = Production|Any CPU
+		{5C920125-034A-4A65-982E-20612D2B027E}.Production|Any CPU.Build.0 = Production|Any CPU
+		{5C920125-034A-4A65-982E-20612D2B027E}.Staging|Any CPU.ActiveCfg = Staging|Any CPU
+		{5C920125-034A-4A65-982E-20612D2B027E}.Staging|Any CPU.Build.0 = Staging|Any CPU
+		{7DC9F484-6B5A-4761-AF66-DD4ABA16276D}.Development|Any CPU.ActiveCfg = Development|Any CPU
+		{7DC9F484-6B5A-4761-AF66-DD4ABA16276D}.Development|Any CPU.Build.0 = Development|Any CPU
+		{7DC9F484-6B5A-4761-AF66-DD4ABA16276D}.Production|Any CPU.ActiveCfg = Production|Any CPU
+		{7DC9F484-6B5A-4761-AF66-DD4ABA16276D}.Production|Any CPU.Build.0 = Production|Any CPU
+		{7DC9F484-6B5A-4761-AF66-DD4ABA16276D}.Staging|Any CPU.ActiveCfg = Staging|Any CPU
+		{7DC9F484-6B5A-4761-AF66-DD4ABA16276D}.Staging|Any CPU.Build.0 = Staging|Any CPU
+		{D53C37FB-8CED-495B-98A4-C6BE388A5D23}.Development|Any CPU.ActiveCfg = Development|Any CPU
+		{D53C37FB-8CED-495B-98A4-C6BE388A5D23}.Development|Any CPU.Build.0 = Development|Any CPU
+		{D53C37FB-8CED-495B-98A4-C6BE388A5D23}.Production|Any CPU.ActiveCfg = Production|Any CPU
+		{D53C37FB-8CED-495B-98A4-C6BE388A5D23}.Production|Any CPU.Build.0 = Production|Any CPU
+		{D53C37FB-8CED-495B-98A4-C6BE388A5D23}.Staging|Any CPU.ActiveCfg = Staging|Any CPU
+		{D53C37FB-8CED-495B-98A4-C6BE388A5D23}.Staging|Any CPU.Build.0 = Staging|Any CPU
+		{1984AF4B-7F08-47C3-85E2-1B01C1B603AD}.Development|Any CPU.ActiveCfg = Development|Any CPU
+		{1984AF4B-7F08-47C3-85E2-1B01C1B603AD}.Development|Any CPU.Build.0 = Development|Any CPU
+		{1984AF4B-7F08-47C3-85E2-1B01C1B603AD}.Production|Any CPU.ActiveCfg = Production|Any CPU
+		{1984AF4B-7F08-47C3-85E2-1B01C1B603AD}.Production|Any CPU.Build.0 = Production|Any CPU
+		{1984AF4B-7F08-47C3-85E2-1B01C1B603AD}.Staging|Any CPU.ActiveCfg = Staging|Any CPU
+		{1984AF4B-7F08-47C3-85E2-1B01C1B603AD}.Staging|Any CPU.Build.0 = Staging|Any CPU
+		{8E09FE46-E6EE-4A8A-8D08-E77DBEFFF07A}.Development|Any CPU.ActiveCfg = Development|Any CPU
+		{8E09FE46-E6EE-4A8A-8D08-E77DBEFFF07A}.Development|Any CPU.Build.0 = Development|Any CPU
+		{8E09FE46-E6EE-4A8A-8D08-E77DBEFFF07A}.Production|Any CPU.ActiveCfg = Production|Any CPU
+		{8E09FE46-E6EE-4A8A-8D08-E77DBEFFF07A}.Production|Any CPU.Build.0 = Production|Any CPU
+		{8E09FE46-E6EE-4A8A-8D08-E77DBEFFF07A}.Production|Any CPU.Deploy.0 = Production|Any CPU
+		{8E09FE46-E6EE-4A8A-8D08-E77DBEFFF07A}.Staging|Any CPU.ActiveCfg = Staging|Any CPU
+		{8E09FE46-E6EE-4A8A-8D08-E77DBEFFF07A}.Staging|Any CPU.Build.0 = Staging|Any CPU
+		{8E09FE46-E6EE-4A8A-8D08-E77DBEFFF07A}.Staging|Any CPU.Deploy.0 = Staging|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {97659306-D920-4A51-8618-C0BBA6570B20}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,53 @@
+﻿@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthProvider
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid" style="
+    display: flex;
+    align-items: center;
+    width: auto;
+">
+        <a class="navbar-brand" href=""><img style="width:44px;" src="./img/TUC-Logo.png"/></a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <AuthorizeView>
+            <Authorized>
+                <AuthorizedMenu CurrentUrl="@currentUrl" UserName="@userName" />
+            </Authorized>
+            <NotAuthorized>
+                <NonAuthorizedMenu />
+            </NotAuthorized>
+        </AuthorizeView>
+    </nav>
+</div>
+
+@code {
+    private string? currentUrl;
+    private string? userName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userName = authState.User.Identity?.Name;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

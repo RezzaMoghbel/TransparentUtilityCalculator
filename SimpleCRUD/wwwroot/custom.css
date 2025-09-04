@@ -1,0 +1,11 @@
+.nav-link-top {
+    padding: 0px 20px 0px 20px;
+}
+.flex-sp-list-header {
+    display: flex;
+    justify-content: space-between;
+}
+.toast {
+    opacity: 1 !important;
+    display: block !important;
+}

@@ -1,0 +1,14 @@
+﻿<span class="badge @(UtilityType == "Electricity" ? "bg-warning text-dark" : 
+                        UtilityType == "Gas"? "bg-success" : 
+                            UtilityType == "Water-Hot"? "bg-danger" : 
+                                UtilityType == "Water-Cold"? "bg-primary" : 
+                                    "bg-light text-dark")">
+    @($"{UtilityType} {ExtraText}")
+</span>
+
+@code {
+    [Parameter]
+    public string UtilityType { get; set; } = "None";
+    [Parameter]
+    public string ExtraText { get; set; } = "";
+}

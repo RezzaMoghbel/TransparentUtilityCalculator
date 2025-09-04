@@ -1,0 +1,238 @@
+﻿@page "/Account/Register"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.EntityFrameworkCore
+@using SimpleCRUD.Data
+@using SimpleCRUD.Data.Models
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IUserStore<ApplicationUser> UserStore
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IEmailSender<ApplicationUser> EmailSender
+@inject ILogger<Register> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Register</PageTitle>
+
+<h1>Register</h1>
+
+<div class="row">
+    <div class="col-lg-6">
+        <StatusMessage Message="@Message" />
+        <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
+            <DataAnnotationsValidator />
+            <h4>Use an email to create a new account.</h4>
+            <hr />
+            <ValidationSummary class="text-danger" role="alert" />
+            <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                <label for="Input.Email">Email</label>
+                <ValidationMessage For="() => Input.Email" class="text-danger" />
+            </div>
+            <div class="form-floating mb-3">
+                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <label for="Input.Password">Password</label>
+                <ValidationMessage For="() => Input.Password" class="text-danger" />
+            </div>
+            <div class="form-floating mb-3">
+                <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                <label for="Input.ConfirmPassword">Confirm Password</label>
+                <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
+            </div>
+            @*             <div class="form-floating mb-3">
+                <InputText @bind-Value="Input.PropertyName" id="Input.PropertyName" class="form-control" aria-required="true" placeholder="Provide property name / number" />
+                <label for="Input.PropertyName">Property name / number</label>
+                <ValidationMessage For="() => Input.PropertyName" class="text-danger" />
+            </div> *@
+            <div class="form-floating mb-3">
+                <InputSelect @bind-Value="Input.BuildingId" class="form-control" id="buildingId">
+                    <option value="0" selected disabled>Select a building</option>
+                    @foreach (var building in Buldings)
+                    {
+                        <option value="@building.Id">@building.Name</option>
+                    }
+                </InputSelect>
+                <label for="buildingId">Building</label>
+                <ValidationMessage For="() => Input.BuildingId" />
+            </div>
+            <div class="form-floating mb-3">
+                <InputSelect @bind-Value="Input.ProviderId" class="form-control" id="providerId">
+                    <option value="0" selected disabled>Select a provider</option>
+                    @foreach (var provider in Providers)
+                    {
+                        <option value="@provider.Id">@provider.Name</option>
+                    }
+                </InputSelect>
+                <label for="providerId">Provider</label>
+                <ValidationMessage For="() => Input.ProviderId" />
+            </div>
+
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+        </EditForm>
+    </div>
+    <div class="col-lg-6" style="    background-image: url(/img/logo.png);
+    background-size: contain;
+    background-repeat: no-repeat;
+background-position: center;
+opacity: 0.5;">
+    </div>
+</div>
+
+@code {
+    private IEnumerable<IdentityError>? identityErrors;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+
+    private List<Data.Models.AccessLevel> AccessLevels = new();
+    private List<Data.Models.Building> Buldings = new();
+    private List<Data.Models.UtilityProvider> Providers = new();
+
+    [Inject] private ApplicationDbContext DbContext { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        // var user = authState.User;
+
+        // if (user.Identity?.IsAuthenticated == true)
+        // {
+        //     NavigationManager.NavigateTo("/", forceLoad: true); // or redirect anywhere else
+        //     return;
+        // }
+        AccessLevels = await DbContext.AccessLevels.ToListAsync();
+        Providers = await DbContext.UtilityProviders.ToListAsync();
+        Buldings = await DbContext.Buildings.ToListAsync();
+    }
+
+    // public async Task RegisterUser(EditContext editContext)
+    // {
+    //     var user = CreateUser();
+
+    //     await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+    //     var emailStore = GetEmailStore();
+    //     await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+    //     var result = await UserManager.CreateAsync(user, Input.Password);
+
+    //     if (!result.Succeeded)
+    //     {
+    //         identityErrors = result.Errors;
+    //         return;
+    //     }
+
+    //     Logger.LogInformation("User created a new account with password.");
+
+    //     var userId = await UserManager.GetUserIdAsync(user);
+    //     var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+    //     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+    //     var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+    //         NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+    //         new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+
+    //     await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+    //     if (UserManager.Options.SignIn.RequireConfirmedAccount)
+    //     {
+    //         RedirectManager.RedirectTo(
+    //             "Account/RegisterConfirmation",
+    //             new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+    //     }
+
+    //     await SignInManager.SignInAsync(user, isPersistent: false);
+    //     RedirectManager.RedirectTo(ReturnUrl);
+    // }
+
+    public async Task RegisterUser(EditContext editContext)
+    {
+        var user = CreateUser();
+
+        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+        var emailStore = GetEmailStore();
+        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+
+        user.BuildingId = Input.BuildingId;
+        user.ProviderId = Input.ProviderId;
+        user.PropertyName = Input.PropertyName;
+
+        user.AccessLevelId = 1; // default to 1
+        user.EmailConfirmed = true;
+        user.AccessAllowed = true;
+
+        var result = await UserManager.CreateAsync(user, Input.Password);
+
+        if (!result.Succeeded)
+        {
+            identityErrors = result.Errors;
+            return;
+        }
+
+        Logger.LogInformation("User registered.");
+
+        RedirectManager.RedirectTo("Account/Login");
+    }
+
+
+    private ApplicationUser CreateUser()
+    {
+        try
+        {
+            return Activator.CreateInstance<ApplicationUser>();
+        }
+        catch
+        {
+            throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
+                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
+        }
+    }
+
+    private IUserEmailStore<ApplicationUser> GetEmailStore()
+    {
+        if (!UserManager.SupportsUserEmail)
+        {
+            throw new NotSupportedException("The default UI requires a user store with email support.");
+        }
+        return (IUserEmailStore<ApplicationUser>)UserStore;
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [Display(Name = "Access Level")]
+        public int AccessLevelId { get; set; } = 1;
+
+        [Required]
+        [StringLength(100, MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+
+
+        [Display(Name = "Property name / number")]
+        public string PropertyName { get; set; } = "";
+        [Range(1, int.MaxValue, ErrorMessage = "Building name is a required field.")]
+        [Display(Name = "Building name")]
+        public int BuildingId { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "Utility Provider is a required field.")]
+        [Display(Name = "Provider name")]
+        public int ProviderId { get; set; }
+    }
+
+}

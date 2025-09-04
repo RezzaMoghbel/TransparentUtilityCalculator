@@ -1,0 +1,72 @@
+﻿@page "/"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using SimpleCRUD.Components.Reuseables.Charts
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using SimpleCRUD.Components.Utils
+@using SimpleCRUD.DTO.Utility.Reports
+@using SimpleCRUD.Services
+@using SimpleCRUD.Engine.Test
+@inject AuthenticationStateProvider AuthProvider
+@inject ToastService ToastService
+
+@inject IdentityUserHandler<string> IdentityUserHandler
+@inject UtilityReportHandler<MonthlyAmountPoint> UtilityReportHandler
+
+<Toast />
+
+<AccessLevelView MinimumAccessLevelName="all">
+    <PageTitle>Home</PageTitle>
+
+    <h1>Dashboard</h1>
+
+    <UtilityAmountCharts TPoint="MonthlyAmountPoint"
+                         Electricity="elecChartAmount"
+                         WaterCold="waterColdChartAmount"
+                         WaterHot="WaterHotChartAmount"
+                         MonthSelector="p => p.MonthStart"
+                         AmountSelector="p => p.TotalAmount"
+                         CurrencySymbol="£" />
+
+    <div class="row g-3 py-3">
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">Utility Readings</h5>
+                    <p class="card-text">A comprehensive list of your utility readings.</p>
+                    <a href="/utility-readings" class="btn btn-primary d-block mt-auto">View</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</AccessLevelView>
+
+@code {
+    private IEnumerable<MonthlyAmountPoint>? elecChartAmount;
+    private IEnumerable<MonthlyAmountPoint>? waterColdChartAmount;
+    private IEnumerable<MonthlyAmountPoint>? WaterHotChartAmount;
+
+    private string? userName;
+    private string? userID;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userName = authState.User.Identity?.Name;
+
+        var result = await IdentityUserHandler.GetUserIdByUsername(userName);
+        userID = result.Data;
+
+        if (string.IsNullOrEmpty(userID))
+            return;
+
+        var electricityAmount = await UtilityReportHandler.GetMonthlyAmount(userID, UtilityTypes.For("1"));
+        var waterColdAmount = await UtilityReportHandler.GetMonthlyAmount(userID, UtilityTypes.For("3"));
+        var waterHotAmount = await UtilityReportHandler.GetMonthlyAmount(userID, UtilityTypes.For("4"));
+
+        elecChartAmount = electricityAmount?.Data;
+        waterColdChartAmount = waterColdAmount?.Data;
+        WaterHotChartAmount = waterHotAmount?.Data;
+    }
+}

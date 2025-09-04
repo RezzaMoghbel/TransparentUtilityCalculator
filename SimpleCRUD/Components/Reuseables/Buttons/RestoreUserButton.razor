@@ -1,0 +1,19 @@
+﻿<BaseActionButton IconClass="bi-sign-turn-left"
+                  ButtonClass="btn-outline-danger"
+                  ModalTitle="Confirm Restore User"
+                  ModalBody="Are you sure you want to restore the deleted user?"
+                  ConfirmButtonText="Restore user"
+                  ConfirmButtonClass="btn-danger"
+                  ModalHeaderClass="text-danger"
+                  RequiresConfirmation="true"
+                  OnClick="@OnRestoreUser"
+                  ExtraStyleClass="@ExtraStyleClass"
+                  Disabled="@Disabled">
+    Restore user
+</BaseActionButton>
+
+@code {
+    [Parameter] public EventCallback OnRestoreUser { get; set; }
+    [Parameter] public string ExtraStyleClass { get; set; } = string.Empty;
+    [Parameter] public bool Disabled { get; set; }
+}

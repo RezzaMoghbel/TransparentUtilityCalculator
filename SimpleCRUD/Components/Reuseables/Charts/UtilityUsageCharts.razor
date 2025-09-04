@@ -1,0 +1,153 @@
+﻿@using Microsoft.JSInterop
+
+<div class="row g-3">
+    <!-- Electricity -->
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Electricity – Monthly Usage (@UnitLabel("Electricity"))</h5>
+                @if (isLoading)
+                {
+                    <div>Loading…</div>
+                }
+                else if (!string.IsNullOrEmpty(loadError))
+                {
+                    <div class="text-danger">@loadError</div>
+                }
+                else
+                {
+                    <div style="height:280px"><canvas id="chartElectricity"></canvas></div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Water-Cold -->
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Water – Cold (@UnitLabel("Water-Cold"))</h5>
+                @if (isLoading)
+                {
+                    <div>Loading…</div>
+                }
+                else if (!string.IsNullOrEmpty(loadError))
+                {
+                    <div class="text-danger">@loadError</div>
+                }
+                else
+                {
+                    <div style="height:280px"><canvas id="chartWaterCold"></canvas></div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Water-Hot -->
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Water – Hot (@UnitLabel("Water-Hot"))</h5>
+                @if (isLoading)
+                {
+                    <div>Loading…</div>
+                }
+                else if (!string.IsNullOrEmpty(loadError))
+                {
+                    <div class="text-danger">@loadError</div>
+                }
+                else
+                {
+                    <div style="height:280px"><canvas id="chartWaterHot"></canvas></div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    /// <summary>Repository you implement to call SP: [utility].[rpt_MonthlyUsage_ByType].</summary>
+    [Parameter] public Func<string, string, DateTime?, DateTime?, Task<List<MonthlyUsagePoint>>>? Fetch { get; set; }
+
+    [Parameter] public string UserId { get; set; } = string.Empty;
+    [Parameter] public DateTime? From { get; set; }
+    [Parameter] public DateTime? To { get; set; }
+
+    private bool isLoading = true;
+    private string? loadError;
+
+    private List<MonthlyUsagePoint> elec = [];
+    private List<MonthlyUsagePoint> waterCold = [];
+    private List<MonthlyUsagePoint> waterHot = [];
+
+    private readonly Dictionary<string, string> Units = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Electricity"] = "kWh",
+            ["Gas"] = "m3",
+            ["Water-Cold"] = "m3",
+            ["Water-Hot"] = "m3"
+        };
+
+    private string UnitLabel(string type) => Units.TryGetValue(type, out var u) ? u : "units";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(UserId))
+        {
+            loadError = "Missing UserId.";
+            isLoading = false;
+            return;
+        }
+        if (Fetch is null)
+        {
+            loadError = "No data fetcher provided. Bind the Fetch parameter.";
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            loadError = null;
+
+            // Load all three series in parallel
+            var t1 = Fetch(UserId, "Electricity", From, To);
+            var t2 = Fetch(UserId, "Water-Cold", From, To);
+            var t3 = Fetch(UserId, "Water-Hot", From, To);
+            await Task.WhenAll(t1, t2, t3);
+
+            elec = t1.Result ?? [];
+            waterCold = t2.Result ?? [];
+            waterHot = t3.Result ?? [];
+        }
+        catch (Exception ex)
+        {
+            loadError = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (isLoading || !string.IsNullOrEmpty(loadError)) return;
+
+        // Render charts whenever we have fresh data
+        await RenderLine("chartElectricity", elec, $"Electricity ({UnitLabel("Electricity")})");
+        await RenderLine("chartWaterCold", waterCold, $"Water-Cold ({UnitLabel("Water-Cold")})");
+        await RenderLine("chartWaterHot", waterHot, $"Water-Hot ({UnitLabel("Water-Hot")})");
+    }
+
+    private async Task RenderLine(string canvasId, List<MonthlyUsagePoint> data, string seriesName)
+    {
+        var labels = data.Select(d => d.MonthStart.ToString("yyyy-MMM")).ToArray();
+        var values = data.Select(d => (double)d.UnitsUsed).ToArray();
+        await JS.InvokeVoidAsync("renderLineChart", canvasId, labels, values, seriesName);
+    }
+
+    public sealed record MonthlyUsagePoint(DateTime MonthStart, decimal UnitsUsed);
+}

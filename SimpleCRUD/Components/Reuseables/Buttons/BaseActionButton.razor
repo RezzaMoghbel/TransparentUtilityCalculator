@@ -1,0 +1,84 @@
+﻿@* Base class *@
+<ErrorDialog_InvalidOperationException @ref="ErrorDialogRef" />
+
+@if (ShowConfirmation && RequiresConfirmation)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title @ModalHeaderClass">@ModalTitle</h5>
+                    <button type="button" class="btn-close" @onclick="CloseConfirm"></button>
+                </div>
+                <div class="modal-body">
+                    <p>@ModalBody</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseConfirm">Cancel</button>
+                    <button class="btn @ConfirmButtonClass" @onclick="OnConfirmClick">@ConfirmButtonText</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<button type="button"
+        disabled="@Disabled"
+        title="@Title"
+        class="btn @ButtonClass @ExtraStyleClass"
+        @onclick="HandleClick">
+    <i class="bi @IconClass"></i> @ChildContent @(DisplayTitle ? @Title : null )
+</button>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string IconClass { get; set; } = string.Empty;
+    [Parameter] public string ButtonClass { get; set; } = "btn-outline-primary";
+    [Parameter] public string ExtraStyleClass { get; set; } = string.Empty;
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public bool DisplayTitle { get; set; }
+
+    [Parameter] public bool RequiresConfirmation { get; set; } = false;
+    [Parameter] public string ModalTitle { get; set; } = "Confirm Action";
+    [Parameter] public string ModalBody { get; set; } = "Are you sure you want to proceed?";
+    [Parameter] public string ConfirmButtonText { get; set; } = "Confirm";
+    [Parameter] public string ConfirmButtonClass { get; set; } = "btn-danger";
+    [Parameter] public string ModalHeaderClass { get; set; } = "text-danger";
+
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private ErrorDialog_InvalidOperationException? ErrorDialogRef;
+    private bool ShowConfirmation { get; set; }
+
+    private void HandleClick()
+    {
+        if (RequiresConfirmation)
+        {
+            ShowConfirmation = true;
+        }
+        else
+        {
+            _ = TriggerAction();
+        }
+    }
+
+    private void CloseConfirm() => ShowConfirmation = false;
+
+    private async Task OnConfirmClick()
+    {
+        ShowConfirmation = false;
+        await TriggerAction();
+    }
+
+    private async Task TriggerAction()
+    {
+        if (!OnClick.HasDelegate)
+        {
+            ErrorDialogRef?.Show("Action is required.");
+            return;
+        }
+
+        await OnClick.InvokeAsync();
+    }
+}

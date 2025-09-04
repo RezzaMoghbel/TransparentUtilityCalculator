@@ -1,0 +1,140 @@
+﻿@typeparam TPoint
+@using Microsoft.JSInterop
+@using SimpleCRUD.Components.Reuseables.Utility
+@using SimpleCRUD.Components.Utils
+
+<div class="row g-3 py-3">
+    <!-- Electricity -->
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><UtilityTypeActiveBadge UtilityType="Electricity" ExtraText="@($"Total: {_elecTotal.ToPounds(2)}")"/></h5>
+
+                @if (Electricity is null)
+                {
+                    <div>Loading…</div>
+                }
+                else if (!Electricity.Any())
+                {
+                    <div class="text-muted">No data</div>
+                }
+                else
+                {
+                    <div style="height:280px"><canvas id="@_elecId"></canvas></div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Water-Cold -->
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><UtilityTypeActiveBadge UtilityType="Water-Cold" ExtraText="@($"Total: {_coldWaterTotal.ToPounds(2)}")" /></h5>
+                @if (WaterCold is null)
+                {
+                    <div>Loading…</div>
+                }
+                else if (!WaterCold.Any())
+                {
+                    <div class="text-muted">No data</div>
+                }
+                else
+                {
+                    <div style="height:280px"><canvas id="@_coldId"></canvas></div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Water-Hot -->
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title mb-3"><UtilityTypeActiveBadge UtilityType="Water-Hot" ExtraText="@($"Total: {_hotWaterTotal.ToPounds(2)}")" /></h5>
+                @if (WaterHot is null)
+                {
+                    <div>Loading…</div>
+                }
+                else if (!WaterHot.Any())
+                {
+                    <div class="text-muted">No data</div>
+                }
+                else
+                {
+                    <div style="height:280px"><canvas id="@_hotId"></canvas></div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    // Data passed from parent
+    [Parameter] public IEnumerable<TPoint>? Electricity { get; set; }
+    [Parameter] public IEnumerable<TPoint>? WaterCold { get; set; }
+    [Parameter] public IEnumerable<TPoint>? WaterHot { get; set; }
+
+    // How to read your point type
+    [Parameter] public required Func<TPoint, DateTime> MonthSelector { get; set; }
+    [Parameter] public required Func<TPoint, decimal> AmountSelector { get; set; }
+
+    [Parameter] public string CurrencySymbol { get; set; } = "£";
+
+    // JS module
+    private IJSObjectReference? _chartsModule;
+
+    // Stable canvas ids
+    private readonly string _elecId = $"chartElectricity_{Guid.NewGuid():N}";
+    private readonly string _coldId = $"chartWaterCold_{Guid.NewGuid():N}";
+    private readonly string _hotId = $"chartWaterHot_{Guid.NewGuid():N}";
+    private decimal _elecTotal, _coldWaterTotal, _hotWaterTotal;
+
+
+    protected override void OnParametersSet()
+    {
+        // Sum directly from the sequences the parent passes in
+        _elecTotal = Electricity?.Sum(p => AmountSelector(p)) ?? 0m;
+        _coldWaterTotal = WaterCold?.Sum(p => AmountSelector(p)) ?? 0m;
+        _hotWaterTotal = WaterHot?.Sum(p => AmountSelector(p)) ?? 0m;
+    }
+
+    private decimal SumAmount(IEnumerable<TPoint>? data)
+        => data?.Sum(p => AmountSelector(p)) ?? 0m;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Import your charts module (make sure /wwwroot/js/charts.js exists)
+            _chartsModule = await JS.InvokeAsync<IJSObjectReference>("import", "/js/charts.js");
+        }
+
+        if (_chartsModule is null) return;
+
+        // Render charts when data is present
+        if (Electricity?.Any() == true)
+            await RenderCurrencyLineAsync(_elecId, Electricity ?? Enumerable.Empty<TPoint>(), "Monthly electricity");
+
+        if (WaterCold?.Any() == true)
+            await RenderCurrencyLineAsync(_coldId, WaterCold ?? Enumerable.Empty<TPoint>(), "Monthly cold water");
+
+        if (WaterHot?.Any() == true)
+            await RenderCurrencyLineAsync(_hotId, WaterHot ?? Enumerable.Empty<TPoint>(), "Monthly hot water");
+
+    }
+
+    private async Task RenderCurrencyLineAsync(string canvasId, IEnumerable<TPoint> data, string seriesName)
+    {
+        var sorted = data.OrderBy(MonthSelector).ToList();
+        var labels = sorted.Select(p => MonthSelector(p).ToString("yyyy-MMM")).ToArray();
+        var valuesDec = sorted.Select(AmountSelector).ToArray();
+        var valuesDouble = valuesDec.Select(d => (double)d).ToArray();
+
+        // Call the exported function from charts.js
+        await _chartsModule!.InvokeVoidAsync("renderCurrencyLineChart",
+          canvasId, labels, valuesDouble, seriesName, CurrencySymbol);
+    }
+}

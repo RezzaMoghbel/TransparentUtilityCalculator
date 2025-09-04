@@ -1,0 +1,24 @@
+﻿<BaseActionButton IconClass="bi-plus-circle"
+                  ButtonClass="btn-outline-primary"
+                  Title=@($"Add new {Label}")
+                  OnClick="Navigate"
+                  ExtraStyleClass="@ExtraStyleClass">
+    Add new @Label
+</BaseActionButton>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Route { get; set; } = string.Empty;
+    [Parameter] public string ExtraStyleClass { get; set; } = string.Empty;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private void Navigate()
+    {
+        if (string.IsNullOrWhiteSpace(Route))
+        {
+            // Use ErrorDialog
+            return;
+        }
+        Navigation.NavigateTo(Route);
+    }
+}

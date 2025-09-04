@@ -1,0 +1,74 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using SimpleCRUD.Data
+@using SimpleCRUD.Data.Models
+
+@inject ApplicationDbContext Db
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthProvider
+
+@if (isAuthorized)
+{
+    @ChildContent
+}
+else if (NotAuthorized is not null)
+{
+    @NotAuthorized
+}
+else if (!HideDefaultNotAuthorized)
+{
+    <p class="text-danger">You are not authorized to view this page.</p>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? NotAuthorized { get; set; }
+
+    // New parameter: allows "User", "Admin", "SuperAdmin", "System", default = "User"
+    [Parameter] public string MinimumAccessLevelName { get; set; } = "User";
+
+    [Parameter] public bool HideDefaultNotAuthorized { get; set; }
+
+    private bool isAuthorized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var userId = UserManager.GetUserId(authState.User);
+
+        if (string.IsNullOrWhiteSpace(userId))
+            return;
+
+        var user = await Db.Users
+            .Include(u => u.AccessLevel)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user is null || user.AccessLevel is null)
+        {
+            isAuthorized = false;
+            return;
+        }
+
+        // Handle "all" to skip check
+        if (MinimumAccessLevelName.Equals("all", StringComparison.OrdinalIgnoreCase))
+        {
+            isAuthorized = true;
+            return;
+        }
+
+        var requiredLevel = await Db.AccessLevels
+            .Where(a => a.Name.ToLower() == MinimumAccessLevelName.ToLower())
+            .Select(a => a.Id)
+            .FirstOrDefaultAsync();
+
+        if (requiredLevel == 0)
+        {
+            Console.Error.WriteLine($"AccessLevel '{MinimumAccessLevelName}' not found in DB.");
+            isAuthorized = false;
+            return;
+        }
+
+        // SuperUser (ID 3) > Admin (2) > Basic (1)
+        isAuthorized = user.AccessLevelId >= requiredLevel;
+    }
+}

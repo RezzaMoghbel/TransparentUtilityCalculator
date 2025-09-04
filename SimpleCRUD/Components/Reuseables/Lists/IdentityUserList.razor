@@ -1,0 +1,255 @@
+﻿@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Components
+@using SimpleCRUD.Components.Reuseables.Buttons
+@using SimpleCRUD.Components.Reuseables.Status
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using SimpleCRUD.Components.Reuseables.Shared
+@using SimpleCRUD.Services
+@using SimpleCRUD.Data.RepositoriesAbstractions
+@using SimpleCRUD.DTO.Identity
+@using SimpleCRUD.Engine.Test
+
+@inject AuthenticationStateProvider AuthProvider
+@inject IdentityUserHandler<string> IdentityUserHandlerString   
+@inject IdentityUserHandler<User>   IdentityUserHandlerUser    
+@inject ICRUD<SqlUpdateResult>      CrudUpdate                  
+
+@if (Result == null)
+{
+    <p>Loading...</p>
+}
+else if (!Result.IsSuccess)
+{
+    <p class="text-danger">Error: @Result.ErrorMessage</p>
+}
+else if (!Users.Any())
+{
+    @* <div class="alert alert-info">No @TableName found.</div> *@
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0">@TableName</h5>
+
+        <div class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0">Page size</label>
+            <select class="form-select form-select-sm" style="width:auto"
+                    @onchange="OnPageSizeChanged" value="@pageSize">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+            </select>
+        </div>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr class="text-center">
+                <th class="text-start">Username</th>
+                <th>Confirmed</th>
+                <th>Type</th>
+                <th>Access</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in PagedUsers)
+            {
+                bool currentUser = user.UserName?.ToLower() == userName.ToLower();
+                string? loggedIn = currentUser ? " background-color: #99f93014;" : null;
+                <tr class="align-content-center text-center">
+
+                    <td class="text-start" style="@loggedIn">
+                        <span class="px-1"></span>
+                        <ResetPasswordButton Username="@user.UserName" ExtraStyleClass="btn-sm" />
+                        <span class="px-1"></span>@user.UserName
+                    </td>
+
+                    <td style="@loggedIn">
+                        <IsActiveBadge Boolean="@user.EmailConfirmed" Yes="✔" No="✘" />
+                    </td>
+                    <td style="@loggedIn">@user.AccessLevel</td>
+                    <td style="@loggedIn">
+                        <IsActiveBadge Boolean="@user.AccessAllowed" Yes="✔" No="✘" />
+                    </td>
+
+                    @if (Deleted)
+                    {
+                        <td style="@loggedIn">
+                            <RestoreUserButton OnRestoreUser="@(() => RestoreUser(user.ID))"
+                                               ExtraStyleClass="btn-sm"
+                                               Disabled="@currentUser" />
+                        </td>
+                    }
+                    else
+                    {
+                        <td style="@loggedIn">
+                            <EditButton Route="@($"/users/edit/{user.ID}")" ExtraStyleClass="btn-sm" /> |
+                            <AccessToggleButton OnAccessChange="@(() => ToggleAccess(user.ID, user.AccessAllowed))"
+                                                IsDisallow="@user.AccessAllowed"
+                                                ExtraStyleClass="btn-sm"
+                                                Disabled="@currentUser" /> |
+                            <DeleteButton OnDelete="@(() => DeleteUser(user.ID))"
+                                          ExtraStyleClass="btn-sm"
+                                          Disabled="@currentUser" />
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="d-flex justify-content-center my-3">
+        <Pagination TotalItems="@Users.Count"
+                    PageSize="@pageSize"
+                    CurrentPage="@currentPage"
+                    CurrentPageChanged="@OnPageChanged"
+                    MaxVisiblePages="7" />
+    </div>
+}
+
+@code {
+    [Parameter] public ToastService? ToastService { get; set; }
+    [Parameter] public Result<IEnumerable<User>>? Result { get; set; } = null;
+    [Parameter] public string TableName { get; set; } = "";
+    [Parameter] public EventCallback OnDataChanged { get; set; }
+    [Parameter] public bool Deleted { get; set; } = false;
+
+    private string userName { get; set; } = "";
+
+    // --- pagination state ---
+    private int currentPage = 1;
+    private int pageSize = 5;
+
+    private List<User> Users => (Result?.Data ?? Enumerable.Empty<User>()).ToList();
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(Users.Count / (double)pageSize));
+
+    private IEnumerable<User> PagedUsers =>
+        Users.Skip((currentPage - 1) * pageSize).Take(pageSize);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userName = authState.User.Identity?.Name ?? "";
+    }
+
+    private Task OnPageChanged(int newPage)
+    {
+        currentPage = Math.Clamp(newPage, 1, TotalPages);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e?.Value?.ToString(), out var newSize) && newSize > 0)
+        {
+            pageSize = newSize;
+            currentPage = 1;
+        }
+    }
+
+    private void ClampPageIfNeeded()
+    {
+        currentPage = Math.Clamp(currentPage, 1, TotalPages);
+    }
+
+    private async Task DeleteUser(string id)
+    {
+        var resultDelete = await IdentityUserHandlerString.Delete(id);
+
+        if (!resultDelete.IsSuccess)
+        {
+            ToastService?.ShowError($"Failed to delete user: {resultDelete.ErrorMessage}");
+            return;
+        }
+
+        ToastService?.ShowSuccess("User deleted successfully.");
+
+        // refresh
+        Result = await IdentityUserHandlerUser.GetAll_Active();
+        ClampPageIfNeeded();
+
+        if (OnDataChanged.HasDelegate)
+            await OnDataChanged.InvokeAsync();
+    }
+
+    private async Task RestoreUser(string id)
+    {
+        var resultDelete = await IdentityUserHandlerString.RestoreUser(id);
+
+        if (!resultDelete.IsSuccess)
+        {
+            ToastService?.ShowError($"Failed to restore user: {resultDelete.ErrorMessage}");
+            return;
+        }
+
+        ToastService?.ShowSuccess("User restored successfully.");
+
+        // refresh
+        Result = await IdentityUserHandlerUser.GetAll_Active();
+        ClampPageIfNeeded();
+
+        if (OnDataChanged.HasDelegate)
+            await OnDataChanged.InvokeAsync();
+    }
+
+    private async Task ToggleAccess(string id, bool currentValue)
+    {
+        var resultToggle = await IdentityUserHandlerUser.SetAccessAllowed(id, !currentValue);
+
+        if (!resultToggle.IsSuccess)
+        {
+            ToastService?.ShowError($"Access update failed: {resultToggle.ErrorMessage}");
+            return;
+        }
+
+        ToastService?.ShowSuccess("Access updated successfully.");
+
+        Result = await IdentityUserHandlerUser.GetAll_Active();
+        ClampPageIfNeeded();
+
+        if (OnDataChanged.HasDelegate)
+            await OnDataChanged.InvokeAsync();
+    }
+
+    public async Task<Result<string>> UpdateUser(User user)
+    {
+        try
+        {
+            var result = await CrudUpdate.ExecuteStoredProcedureAsync<SqlUpdateResult>(
+                "identityUsers.Update",
+                new
+                {
+                    Id = user.ID,
+                    EmailConfirmed = user.EmailConfirmed,
+                    PhoneNumber = user.PhoneNumber,
+                    PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                    TwoFactorEnabled = user.TwoFactorEnabled,
+                    LockoutEnd = DateTimeOffset.UtcNow.AddYears(1),
+                    LockoutEnabled = user.LockoutEnabled,
+                    AccessFailedCount = user.AccessFailedCount,
+                    AccessAllowed = user.AccessAllowed,
+                    AccessLevelId = user.AccessLevelId ?? 1
+                });
+
+            SqlUpdateResult? row = result.FirstOrDefault();
+
+            if (row == null || row.UpdatedId == "-1" || string.IsNullOrEmpty(row.UpdatedId))
+                return Result<string>.Fail("User update failed or user not found.");
+
+            if (OnDataChanged.HasDelegate)
+                await OnDataChanged.InvokeAsync();
+
+            return Result<string>.Success(row.UpdatedId);
+        }
+        catch (Exception ex)
+        {
+            return Result<string>.Fail(ex.Message);
+        }
+    }
+}

@@ -1,0 +1,61 @@
+﻿@using SimpleCRUD.Services
+@inject ToastService ToastService
+
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+    @if (visible)
+    {
+        <div class="toast show @CssClass" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">@Title</strong>
+                <button type="button" class="btn-close" @onclick="Hide"></button>
+            </div>
+            <div class="toast-body">
+                @Message
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string Title = "";
+    private string Message = "";
+    private string CssClass = "bg-primary text-white";
+    private bool visible = false;
+    private System.Timers.Timer? timer;
+
+    protected override void OnInitialized()
+    {
+        Console.WriteLine("Toast component initialized");
+        ToastService.OnShow += Show;
+    }
+
+    private void Show(string title, string message, string cssClass)
+    {
+        Console.WriteLine($"Toast triggered: {title} - {message}");
+
+        Title = title;
+        Message = message;
+        CssClass = cssClass;
+
+        InvokeAsync(() =>
+        {
+            visible = true;
+            StateHasChanged();
+        });
+
+        timer?.Stop();
+        timer = new System.Timers.Timer(4000);
+        timer.Elapsed += (_, _) => Hide();
+        timer.AutoReset = false;
+        timer.Start();
+    }
+
+    private void Hide()
+    {
+        InvokeAsync(() =>
+        {
+            visible = false;
+            StateHasChanged();
+        });
+    }
+}

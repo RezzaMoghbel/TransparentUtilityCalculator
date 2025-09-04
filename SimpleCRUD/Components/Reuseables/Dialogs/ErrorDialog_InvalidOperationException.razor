@@ -1,0 +1,36 @@
+﻿@if (IsVisible)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Error</h5>
+                    <button type="button" class="btn-close" @onclick="Hide"></button>
+                </div>
+                <div class="modal-body">
+                    <p>@Message</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" @onclick="Hide">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Message { get; set; } = "An error occurred.";
+    private bool IsVisible { get; set; } = false;
+
+    public void Show(string message)
+    {
+        Message = message;
+        IsVisible = true;
+        StateHasChanged();
+    }
+
+    private void Hide()
+    {
+        IsVisible = false;
+    }
+}

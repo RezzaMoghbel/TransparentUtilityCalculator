@@ -1,0 +1,197 @@
+﻿@page "/utility-readings/create"
+@attribute [Authorize]
+
+@using SimpleCRUD.Components.Utils
+@using SimpleCRUD.DTO.Utility.Readings
+@using SimpleCRUD.DTO.Utility.Types
+@using SimpleCRUD.DTO.Identity
+@using SimpleCRUD.Services
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using System.Globalization
+
+@inject NavigationManager NavManager
+@inject ToastService ToastService
+@inject AuthenticationStateProvider AuthProvider
+
+<!--Inject your handlers -->
+@inject IdentityUserHandler<string> IdentityUserHandler
+@inject UtilityReadingHandler<UtilityType> UtilityTypesHandler
+@inject UtilityReadingHandler<UtilityReadingCreate> UtilityCreateHandler
+
+@rendermode InteractiveServer
+
+<Toast />
+
+<AccessLevelView>
+    <PageTitle>Create new</PageTitle>
+
+    <h3>Create a new reading</h3>
+
+    @if (isLoading)
+    {
+        <p>Loading Electricity Readings...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <p class="text-danger">@loadError</p>
+    }
+    else
+    {
+        <EditForm Model="urCreate" OnValidSubmit="HandleValidSubmit" FormName="createUserForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="row g-4">
+                <div class="form-floating mb-4 col">
+                    <InputSelect @bind-Value="urCreate.UtilityTypeId" class="form-control" id="utilityTypeId">
+                        <option value="0" selected disabled>Select a type</option>
+                        @if (utilityTypesResult?.Data != null)
+                        {
+                            @foreach (var utilityType in utilityTypesResult.Data)
+                            {
+                                <option value="@utilityType.Id">@utilityType.Name</option>
+                            }
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => urCreate.UtilityTypeId)" />
+                    <label for="accessLevel">Utility type</label>
+                </div>
+
+                <div class="form-floating mb-4 col">
+                    <InputNumber @bind-Value="urCreate.UnitRate" class="form-control" id="unitRate" />
+                    <ValidationMessage For="@(() => urCreate.UnitRate)" />
+                    <label for="unitRate">Unit rate (£)</label>
+                </div>
+
+                <div class="form-floating mb-4 col">
+                    <InputNumber @bind-Value="urCreate.StandingChargePerDay" class="form-control" id="standingChargePerDay" />
+                    <ValidationMessage For="@(() => urCreate.StandingChargePerDay)" />
+                    <label for="standingChargePerDay">Flat rate per day (£)</label>
+                </div>
+
+                <div class="form-floating mb-4 col">
+                    <InputSelect @bind-Value="urCreate.VatRateFactor" class="form-control" id="vatRateFactor">
+                        <option value="0" selected disabled>Select VAT rate</option>
+                        <option value="1">0%</option>
+                        <option value="1.05">5%</option>
+                        <option value="1.10">10%</option>
+                        <option value="1.15">15%</option>
+                        <option value="1.2">20%</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => urCreate.VatRateFactor)" />
+                    <label for="vatRateFactor">VAT rate (%)</label>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="form-floating mb-4 col">
+                    <InputDate @bind-Value="urCreate.ReadingStartDate" class="form-control" id="readingStartDate" />
+                    <ValidationMessage For="@(() => urCreate.ReadingStartDate)" />
+                    <label for="readingStartDate">Reading start date (DD-MM-YYYY)</label>
+                </div>
+
+                <div class="form-floating mb-4 col">
+                    <InputNumber @bind-Value="urCreate.MeterStart" class="form-control" id="meterStart" />
+                    <ValidationMessage For="@(() => urCreate.MeterStart)" />
+                    <label for="meterStart">Meter reading at start date</label>
+                </div>
+
+                <div class="form-floating mb-4 col">
+                    <InputDate @bind-Value="urCreate.ReadingEndDate" class="form-control" id="readingEndDate" />
+                    <ValidationMessage For="@(() => urCreate.ReadingEndDate)" />
+                    <label for="readingEndDate">Reading end date (DD-MM-YYYY)</label>
+                </div>
+
+                <div class="form-floating mb-4 col">
+                    <InputNumber @bind-Value="urCreate.MeterEnd" class="form-control" id="meterEnd" />
+                    <ValidationMessage For="@(() => urCreate.MeterEnd)" />
+                    <label for="meterEnd">Meter reading at end date</label>
+                </div>
+            </div>
+
+            <div class="row g-2">
+                <div class="form-floating mb-2 col">
+                    <InputTextArea @bind-Value="urCreate.Notes" class="form-control" id="notes" />
+                    <ValidationMessage For="@(() => urCreate.Notes)" />
+                    <label for="notes">Reading notes</label>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-start gap-2 mt-3" style="flex-direction: row-reverse;">
+                <button class="btn btn-primary" type="submit" style="width: 200px">Save</button>
+                <span style="padding-left:20px"></span>
+                <button class="btn btn-secondary" type="button"
+                        formnovalidate
+                @onclick:preventDefault
+                        @onclick="GoBack">
+                    Cancel
+                </button>
+            </div>
+        </EditForm>
+    }
+</AccessLevelView>
+
+@code {
+    private UtilityReadingCreate urCreate = new();
+    private Result<IEnumerable<UtilityType>>? utilityTypesResult;
+    private bool isLoading = true;
+    private string? loadError;
+    private string? userName;
+    private string? userID;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userName = authState.User.Identity?.Name;
+
+        var idResult = await IdentityUserHandler.GetUserIdByUsername(userName);
+        userID = idResult.Data;
+
+        if (!string.IsNullOrEmpty(userID))
+        {
+            urCreate.UserId = userID;
+        }
+
+        utilityTypesResult = await UtilityTypesHandler.GetAllUtilityTypes(true);
+
+        if (!utilityTypesResult.IsSuccess)
+        {
+            loadError = utilityTypesResult?.ErrorMessage;
+            isLoading = false;
+            return;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (string.IsNullOrEmpty(userID))
+        {
+            ToastService.ShowError($"Failed to create a new reading, try again later!");
+            return;
+        }
+
+        if (urCreate.UtilityTypeId < 1)
+        {
+            ToastService.ShowError("Please select a 'Utility type'!");
+            return;
+        }
+
+        var result = await UtilityCreateHandler.CreateUtilityReading(urCreate);
+
+        if (result.IsSuccess)
+        {
+            ToastService.ShowSuccess("Utility reading added!");
+            NavManager.NavigateTo("/utility-readings");
+        }
+        else
+        {
+            ToastService.ShowError($"Failed to create a new reading, try again later! {result.ErrorMessage}");
+        }
+    }
+
+    private void GoBack() => NavManager.NavigateTo("/utility-readings");
+}

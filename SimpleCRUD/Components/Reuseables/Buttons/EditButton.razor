@@ -1,0 +1,23 @@
+﻿<BaseActionButton IconClass="bi-pencil"
+                  ButtonClass="btn-outline-warning"
+                  Title="Edit"
+                  DisplayTitle="DisplayTitle"
+                  OnClick="Navigate"
+                  ExtraStyleClass="@ExtraStyleClass" />
+
+@code {
+    [Parameter] public string Route { get; set; } = string.Empty;
+    [Parameter] public string ExtraStyleClass { get; set; } = string.Empty;
+    [Parameter] public bool DisplayTitle { get; set; }
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private void Navigate()
+    {
+        if (string.IsNullOrWhiteSpace(Route))
+        {
+            // Use ErrorDialog
+            return;
+        }
+        Navigation.NavigateTo(Route);
+    }
+}

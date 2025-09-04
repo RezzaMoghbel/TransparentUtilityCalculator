@@ -1,0 +1,207 @@
+﻿@page "/utility-readings"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using SimpleCRUD.Components.Reuseables.Lists
+@using SimpleCRUD.Components.Reuseables.Shared
+@using SimpleCRUD.Components.Reuseables.Status
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using SimpleCRUD.Components.Reuseables.Utility
+@using SimpleCRUD.Components.Utils
+@using SimpleCRUD.DTO.Utility.Readings
+@using SimpleCRUD.DTO.Utility.Readings.Requests
+@using SimpleCRUD.Services
+@using SimpleCRUD.Engine.Test
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavManager
+@inject ToastService ToastService
+
+@inject IdentityUserHandler<string> IdentityUserHandler
+@inject UtilityReadingHandler<UtilityReading> UtilityReadingHandler
+
+<Toast />
+
+<AccessLevelView>
+    <PageTitle>Utility Readings</PageTitle>
+
+    <div class="flex-sp-list-header">
+        <h1 class="px-1">Readings</h1>
+        <AddNewButton Route="@("/utility-readings/create")" Label="reading" ExtraStyleClass="btn-sm" />
+    </div>
+
+    @if (resultGetAll is null)
+    {
+        <p>Loading...</p>
+    }
+    else if (!resultGetAll.IsSuccess)
+    {
+        <p class="text-danger">Error: @resultGetAll.ErrorMessage</p>
+    }
+    else if (groups.Count == 0)
+    {
+        <p>No readings.</p>
+    }
+    else
+    {
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0">Page size</label>
+                <select class="form-select form-select-sm" style="width:auto"
+                        @onchange="OnPageSizeChanged" value="@pageSize">
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+        </div>
+
+        <table class="table">
+            <thead>
+                <tr class="text-center">
+                    <th class="text-start">Type</th>
+                    <th class="text-center">Unit rate</th>
+                    <th class="text-center">Standing charge</th>
+                    <th class="text-center">VAT</th>
+                    <th class="text-center">Meter start</th>
+                    <th class="text-center">Meter end</th>
+                    <th class="text-center">Units used</th>
+                    <th class="text-center">Days billed</th>
+                    <th class="text-center">Usage cost</th>
+                    <th class="text-center">Standing total</th>
+                    <th class="text-center">Total</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var grp in PagedGroups)
+                {
+                    <tr class="table-light">
+                        <td colspan="@columnCount" class="fw-semibold text-start">
+                            From @grp.Start.ToString("yyyy-MMM-dd")
+                            To @grp.End.ToString("yyyy-MMM-dd")
+                        </td>
+                    </tr>
+
+                    @foreach (var uR in grp.Items)
+                    {
+                        <tr class="align-content-center text-center">
+                            <td class="text-start"><UtilityTypeActiveBadge UtilityType="@uR.UtilityType" /></td>
+                            <td class="text-center">@uR.UnitRate.ToPounds(3)</td>
+                            <td class="text-center">@uR.StandingChargePerDay.ToPounds(3)</td>
+                            <td class="text-center">@PercentUtils.FactorToPercentString(uR.VatRateFactor, 0)</td>
+
+                            <td class="text-center">@uR.MeterStart</td>
+                            <td class="text-center">@uR.MeterEnd</td>
+                            <td class="text-center">@uR.UnitsUsed</td>
+                            <td class="text-center">@uR.BillDays</td>
+                            <td class="text-center">@uR.TotalUsage.ToPounds(2)</td>
+                            <td class="text-center">@uR.TotalStandingCharge.ToPounds(2)</td>
+                            <td class="text-center">@uR.Total.ToPounds(2)</td>
+                            <td class="text-center">
+                                <ViewButton Route="@($"/utility-readings/view/{uR.Id}")" ExtraStyleClass="btn-sm"></ViewButton>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        <div class="d-flex justify-content-center my-3">
+            <Pagination TotalItems="@groups.Count"
+                        PageSize="@pageSize"
+                        CurrentPage="@currentPage"
+                        CurrentPageChanged="@OnPageChanged"
+                        MaxVisiblePages="7" />
+        </div>
+    }
+</AccessLevelView>
+
+@code {
+    private Result<IEnumerable<UtilityReading>>? resultGetAll;
+
+    private List<UtilityReading> allReadings =>
+        (resultGetAll?.Data ?? Enumerable.Empty<UtilityReading>()).ToList();
+
+    private sealed class ReadingGroup
+    {
+        public DateTime Start { get; init; }
+        public DateTime End { get; init; }
+        public List<UtilityReading> Items { get; init; } = new();
+    }
+
+    private List<ReadingGroup> groups = new();
+
+    private int currentPage = 1;
+    private int pageSize = 5;
+
+    private readonly int columnCount = 12;
+
+    private IEnumerable<ReadingGroup> PagedGroups =>
+        groups.Skip((currentPage - 1) * pageSize).Take(pageSize);
+
+    private string? userName;
+    private string? userID;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userName = authState.User.Identity?.Name;
+
+        var idResult = await IdentityUserHandler.GetUserIdByUsername(userName);
+        userID = idResult.Data;
+
+        await LoadAll();
+    }
+
+    private async Task LoadAll()
+    {
+        if (string.IsNullOrEmpty(userID))
+        {
+            resultGetAll = Result<IEnumerable<UtilityReading>>.Fail("User not found.");
+            return;
+        }
+
+        var request = new GetAllReadingsRequest { UserId = userID };
+
+        resultGetAll = await UtilityReadingHandler.GetAllReadings(request);
+
+        if (resultGetAll.IsSuccess)
+        {
+            BuildGroups();
+            currentPage = 1;
+        }
+    }
+
+    private void BuildGroups()
+    {
+        groups = allReadings
+            .GroupBy(r => new { r.ReadingStartDate, r.ReadingEndDate })
+            .OrderByDescending(g => g.Key.ReadingStartDate)
+            .ThenByDescending(g => g.Key.ReadingEndDate)
+            .Select(g => new ReadingGroup
+                {
+                    Start = g.Key.ReadingStartDate.Date,
+                    End = g.Key.ReadingEndDate.Date,
+                    Items = g.OrderBy(r => r.UtilityTypeId).ThenBy(r => r.Id).ToList()
+                })
+            .ToList();
+    }
+
+    private Task OnPageChanged(int newPage)
+    {
+        var totalPages = Math.Max(1, (int)Math.Ceiling(groups.Count / (double)pageSize));
+        currentPage = Math.Clamp(newPage, 1, totalPages);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e?.Value?.ToString(), out var newSize) && newSize > 0)
+        {
+            pageSize = newSize;
+            currentPage = 1;
+        }
+    }
+}

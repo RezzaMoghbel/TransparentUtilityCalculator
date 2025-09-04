@@ -1,0 +1,39 @@
+﻿@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+@if (!_isAuthenticatedChecked)
+{
+    <p>Loading...</p>
+}
+else if (!_isAuthenticated)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _isAuthenticated;
+    private bool _isAuthenticatedChecked;
+    private bool _hasRedirected;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            _isAuthenticated = user.Identity?.IsAuthenticated == true;
+            _isAuthenticatedChecked = true;
+
+            StateHasChanged(); // Force re-render so <ChildContent> or redirect can happen
+
+            if (_isAuthenticated && !_hasRedirected)
+            {
+                _hasRedirected = true;
+                Navigation.NavigateTo("/", forceLoad: true);
+            }
+        }
+    }
+}

@@ -1,0 +1,13 @@
+﻿<span class="badge rounded-pill @(Boolean ? "bg-success" : "bg-secondary")">
+    @(Boolean ? Yes : No)
+</span>
+
+@code {
+    [Parameter] 
+    public bool Boolean { get; set; }
+    [Parameter]
+    public string Yes { get; set; } = "Yes";
+    [Parameter]
+    public string No { get; set; } = "No";
+
+}

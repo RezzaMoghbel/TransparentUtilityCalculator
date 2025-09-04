@@ -1,0 +1,88 @@
+﻿@* @page "/Account/manage/user-approvals"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using SimpleCRUD.Data
+
+@inject ApplicationDbContext Db
+@inject UserManager<ApplicationUser> UserManager
+
+<h3>Pending User Approvals</h3>
+
+@if (users == null)
+{
+    <p>Loading...</p>
+}
+else if (!users.Any())
+{
+    <p>No users pending approval.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Requested Level</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.Email</td>
+                    <td>@user.AccessLevel?.Name</td>
+                    <td>
+                        <button type="button" class="btn btn-success btn-sm" @onclick="@(() => OnApproveClicked(user.Id))">Approve</button>
+                        <button type="button" class="btn btn-danger btn-sm" @onclick="@(() => OnRejectClicked(user.Id))">Reject</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<ApplicationUser> users = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingUsers();
+    }
+
+    private async Task OnApproveClicked(string id) => await ApproveUser(id);
+    private async Task OnRejectClicked(string id) => await RejectUser(id);
+
+    private async Task ApproveUser(string userId)
+    {
+        Console.WriteLine($"Approve clicked: {userId}");
+        var user = await UserManager.FindByIdAsync(userId);
+        if (user is null) return;
+
+        user.AccessAllowed = true;
+        await UserManager.UpdateAsync(user);
+        await LoadPendingUsers();
+    }
+
+    private async Task RejectUser(string userId)
+    {
+        Console.WriteLine($"Reject clicked: {userId}");
+        var user = await UserManager.FindByIdAsync(userId);
+        if (user is null) return;
+
+        await UserManager.DeleteAsync(user);
+        await LoadPendingUsers(); 
+    }
+
+    private async Task LoadPendingUsers()
+    {
+        users = await Db.Users
+            .Include(u => u.AccessLevel)
+            .Where(u => !u.AccessAllowed)
+            .ToListAsync();
+
+        StateHasChanged();
+    }
+}
+
+ *@

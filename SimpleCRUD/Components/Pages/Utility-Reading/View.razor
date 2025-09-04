@@ -1,0 +1,269 @@
+﻿@page "/utility-readings/view/{Id}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Components           <!-- for [Parameter] -->
+@using SimpleCRUD.Components.Utils
+@using SimpleCRUD.DTO.Utility.Readings
+@using SimpleCRUD.DTO.Utility.Types
+@using SimpleCRUD.Services
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using System.Globalization
+@using SimpleCRUD.Components.Reuseables.Utility
+@using SimpleCRUD.Engine.Test                   <!-- ✅ handlers namespace -->
+@inject NavigationManager NavManager
+@inject ToastService ToastService
+@inject AuthenticationStateProvider AuthProvider
+
+<!-- ✅ inject handlers instead of "new" -->
+@inject IdentityUserHandler<string> IdentityUserHandler
+@inject UtilityReadingHandler<UtilityReading> UtilityReadingHandler
+
+<style>
+    .readonly-box {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    @@media (max-width: 576px) {
+        .form-floating > label {
+            font-size: .9rem;
+        }
+
+        .section-title {
+            margin-top: .75rem;
+        }
+    }
+</style>
+
+<Toast />
+
+<AccessLevelView>
+    <PageTitle>@(uR?.UtilityType is null ? "Reading" : $"{uR.UtilityType} Reading")</PageTitle>
+
+    <h3 class="py-3">
+        <UtilityTypeActiveBadge UtilityType="@uR?.UtilityType" ExtraText="reading" />
+    </h3>
+
+    @if (isLoading)
+    {
+        <p>Loading the requested item...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <p class="text-danger">@loadError</p>
+    }
+    else
+    {
+        @* ------------ Pre-calc for display ------------ *@
+
+        var unitLabel = Units.GetValueOrDefault(uR.UtilityType, "");
+        var days = uR.BillDays;
+        var unitsUsed = uR.UnitsUsed;
+        var unitRate = uR.UnitRate;
+        var standing = uR.StandingChargePerDay;
+        var vatFactor = uR.VatRateFactor;
+        var vatPct = PercentUtils.FactorToPercentValue(vatFactor, 2);
+
+        var usageCost = unitsUsed * unitRate;          // Units × Unit rate
+        var standingTotal = days * standing;            // Days × Standing/day
+        var subTotal = usageCost + standingTotal;       // before VAT
+        var vatAmount = subTotal * (vatFactor - 1m);
+        var total = subTotal * vatFactor;               // should match uR.Total
+
+        var equation = "Total = ( (Units × Unit rate) + (Days × Standing/day) ) × VAT factor";
+
+        var calculations =
+        $"({unitsUsed:0.###} {unitLabel} × {unitRate.ToPounds(3)}) + ({days} × {standing.ToPounds(3)}) = {subTotal.ToPounds(2)}{Environment.NewLine}" +
+        $"Subtotal × VAT {vatFactor:0.00} ({vatPct:0.#}%) = {total.ToPounds(2)}";
+
+
+        <!-- Period -->
+        <div class="row g-3">
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@uR.ReadingStartDate.ToString("yyyy MMM dd")" class="form-control" id="readingStartDate" disabled>
+                <label for="readingStartDate">Start date</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@uR.ReadingEndDate.ToString("yyyy MMM dd")" class="form-control" id="readingEndDate" disabled>
+                <label for="readingEndDate">End date</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@total.ToPounds(2)" class="form-control" id="total" disabled>
+                <label for="total">Total</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@(days + " days")" class="form-control" id="billDays" disabled>
+                <label for="billDays">Days billed</label>
+            </div>
+        </div>
+
+        <!-- Usage -->
+        <h5 class="section-title mt-3">Usage</h5>
+        <div class="row g-3">
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                <input type="text" value="@uR.MeterStart.ToString("0.###")" class="form-control" id="meterStart" disabled>
+                <label for="meterStart">Start</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                <input type="text" value="@uR.MeterEnd.ToString("0.###")" class="form-control" id="meterEnd" disabled>
+                <label for="meterEnd">End</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-lg-4">
+                <input type="text" value="@($"{uR.UnitsUsed:0.###} {unitLabel}")" class="form-control" id="unitsUsed" disabled>
+                <label for="unitsUsed">Units used</label>
+            </div>
+        </div>
+
+        <!-- Rates -->
+        <h5 class="section-title mt-3">Rates</h5>
+        <div class="row g-3">
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                <input type="text" value="@unitRate.ToPounds(3)" class="form-control" id="unitRate" disabled>
+                <label for="unitRate">Unit rate (per @unitLabel)</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                <input type="text" value="@standing.ToPounds(3)" class="form-control" id="standingChargePerDay" disabled>
+                <label for="standingChargePerDay">Standing charge / day</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-lg-4">
+                <input type="text" value="@($"{vatPct:0.#}% (×{vatFactor:0.00})")" class="form-control" id="vatRateFactor" disabled>
+                <label for="vatRateFactor">VAT</label>
+            </div>
+        </div>
+
+        <!-- Cost breakdown -->
+        <h5 class="section-title mt-3">Cost breakdown</h5>
+        <div class="row g-3">
+            <div class="mb-2 col-12 col-lg-6">
+                <label class="form-label">Equation</label>
+                <textarea id="equation" class="form-control readonly-box" rows="2" readonly>@equation</textarea>
+            </div>
+            <div class="mb-2 col-12 col-lg-6">
+                <label class="form-label">Calculation</label>
+                <textarea id="calculations" class="form-control readonly-box" rows="3" readonly>@calculations</textarea>
+            </div>
+
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@usageCost.ToPounds(2)" class="form-control" id="usageCost" disabled>
+                <label for="usageCost">Usage cost</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@standingTotal.ToPounds(2)" class="form-control" id="standingTotal" disabled>
+                <label for="standingTotal">Standing total</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@subTotal.ToPounds(2)" class="form-control" id="subTotal" disabled>
+                <label for="subTotal">Subtotal (Excl VAT)</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@vatAmount.ToPounds(2)" class="form-control" id="vatAmount" disabled>
+                <label for="vatAmount">VAT amount</label>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <h5 class="section-title mt-3">Notes</h5>
+        <div class="row g-3">
+            <div class="mb-2 col-12">
+                <textarea class="form-control readonly-box" id="notes" rows="2" readonly>@uR.Notes</textarea>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center mt-3 flex-wrap">
+            <button class="btn btn-secondary" type="button"
+                    formnovalidate @onclick:preventDefault @onclick="GoBack">
+                Back
+            </button>
+
+            <div class="ms-auto d-flex" style="gap:20px">
+                <EditButton Route="@($"/utility-readings/update/{uR.Id}")" DisplayTitle="true" />
+                <DeleteButton OnDelete="@(DeleteUser)" DisplayTitle="true" />
+            </div>
+        </div>
+    }
+</AccessLevelView>
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private UtilityReading uR = new();
+    private bool isLoading = true;
+    private string? loadError;
+    private string? userName;
+    private string? userID;
+
+    private readonly Dictionary<string, string> Units =
+        new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Electricity"] = "kWh",
+                ["Gas"] = "m3",
+                ["Water-Hot"] = "m3",
+                ["Water-Cold"] = "m3"
+            };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(Id) || !int.TryParse(Id, out var readingId) || readingId < 1)
+        {
+            NavManager.NavigateTo("/utility-readings");
+            return;
+        }
+
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userName = authState.User.Identity?.Name;
+
+        var result = await IdentityUserHandler.GetUserIdByUsername(userName);
+        userID = result.Data;
+
+        if (string.IsNullOrEmpty(userID))
+        {
+            NavManager.NavigateTo("/utility-readings");
+            return;
+        }
+
+        var uRResult = await UtilityReadingHandler.GetUtilityReadingsByID(userID, readingId);
+
+        if (!uRResult.IsSuccess)
+        {
+            loadError = uRResult?.ErrorMessage ?? "Failed to load the requested item.";
+            isLoading = false;
+            return;
+        }
+
+        uR = uRResult.Data?.FirstOrDefault() ?? new UtilityReading();
+        if (uR.Id < 1)
+        {
+            loadError = "The requested item was not found.";
+            isLoading = false;
+            NavManager.NavigateTo("/utility-readings");
+            return;
+        }
+
+        isLoading = false;
+    }
+
+    private void GoBack() => NavManager.NavigateTo("/utility-readings");
+
+    private async Task DeleteUser()
+    {
+        if (userID is null || uR.Id < 1)
+        {
+            ToastService?.ShowError("Failed to delete reading, try again later!");
+            return;
+        }
+
+        var result = await UtilityReadingHandler.DeleteUtilityReading(uR);
+
+        if (!result.IsSuccess)
+        {
+            ToastService?.ShowError($"Failed to delete reading: {result.ErrorMessage}");
+            return;
+        }
+
+        ToastService?.ShowSuccess("Reading deleted successfully.");
+        NavManager.NavigateTo("/utility-readings");
+    }
+}

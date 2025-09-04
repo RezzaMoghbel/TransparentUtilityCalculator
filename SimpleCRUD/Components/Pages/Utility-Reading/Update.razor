@@ -1,0 +1,319 @@
+﻿@page "/utility-readings/update/{Id:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Components    
+@using SimpleCRUD.Components.Utils
+@using SimpleCRUD.DTO.Utility.Readings
+@using SimpleCRUD.DTO.Utility.Types
+@using SimpleCRUD.Services
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using SimpleCRUD.Components.Reuseables.Utility
+@using SimpleCRUD.Engine.Test            
+@inject NavigationManager NavManager
+@inject ToastService ToastService
+@inject AuthenticationStateProvider AuthProvider
+
+<!-- inject handlers -->
+@inject IdentityUserHandler<string> IdentityUserHandler
+@inject UtilityReadingHandler<UtilityType> UtilityTypesHandler
+@inject UtilityReadingHandler<UtilityReading> UtilityReadHandler
+@inject UtilityReadingHandler<UtilityReadingUpdate> UtilityUpdateHandler
+
+<style>
+    /* mobile-friendly tweaks */
+    .readonly-box {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    @@media (max-width: 576px) {
+        .form-floating > label {
+            font-size: .9rem;
+        }
+
+        .section-title {
+            margin-top: .75rem;
+        }
+    }
+</style>
+
+<Toast />
+
+<AccessLevelView>
+    <PageTitle>Edit reading</PageTitle>
+
+    <h3 class="py-3">
+        <UtilityTypeActiveBadge UtilityType="@currentUtilityTypeName" ExtraText="reading (update)" />
+    </h3>
+
+    @if (isLoading)
+    {
+        <p>Loading…</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <p class="text-danger">@loadError</p>
+    }
+    else
+    {
+        <EditForm Model="urUpdate" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <!-- Top row -->
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputDate @bind-Value="urUpdate.ReadingStartDate" class="form-control" id="readingStartDate" />
+                    <ValidationMessage For="@(() => urUpdate.ReadingStartDate)" />
+                    <label for="readingStartDate">Start date</label>
+                </div>
+
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputDate @bind-Value="urUpdate.ReadingEndDate" class="form-control" id="readingEndDate" />
+                    <ValidationMessage For="@(() => urUpdate.ReadingEndDate)" />
+                    <label for="readingEndDate">End date</label>
+                </div>
+            </div>
+
+            <!-- Usage -->
+            <h5 class="section-title mt-3">Usage</h5>
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputNumber @bind-Value="urUpdate.MeterStart" step="0.001" inputmode="decimal" min="0"
+                                 class="form-control" id="meterStart" />
+                    <ValidationMessage For="@(() => urUpdate.MeterStart)" />
+                    <label for="meterStart">Meter start</label>
+                </div>
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputNumber @bind-Value="urUpdate.MeterEnd" step="0.001" inputmode="decimal" min="0"
+                                 class="form-control" id="meterEnd" />
+                    <ValidationMessage For="@(() => urUpdate.MeterEnd)" />
+                    <label for="meterEnd">Meter end</label>
+                </div>
+                <div class="form-floating mb-2 col-12 col-lg-4">
+                    <input type="text" class="form-control" id="unitsUsed"
+                           value="@($"{UnitsPreview:0.###} {CurrentUnitLabel}")" disabled>
+                    <label for="unitsUsed">Units used</label>
+                </div>
+            </div>
+
+            <!-- Rates -->
+            <h5 class="section-title mt-3">Rates</h5>
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputNumber @bind-Value="urUpdate.UnitRate" step="0.001" inputmode="decimal" min="0"
+                                 class="form-control" id="unitRate" />
+                    <ValidationMessage For="@(() => urUpdate.UnitRate)" />
+                    <label for="unitRate">Unit rate (per @CurrentUnitLabel)</label>
+                </div>
+
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputNumber @bind-Value="urUpdate.StandingChargePerDay" step="0.001" inputmode="decimal" min="0"
+                                 class="form-control" id="standingPerDay" />
+                    <ValidationMessage For="@(() => urUpdate.StandingChargePerDay)" />
+                    <label for="standingPerDay">Standing charge / day</label>
+                </div>
+
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    @{
+                        decimal.TryParse(urUpdate.VatRateFactor.ToString(), out decimal vatFactor);
+                        var vatPct = PercentUtils.FactorToPercentValue(vatFactor, 2);
+                    }
+                    <input type="text" value="@($"{vatPct:0.#}% (×{vatFactor:0.00})")" class="form-control" id="vatRateFactor" disabled>
+                    <label for="vatRateFactor">VAT</label>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <h5 class="section-title mt-3">Notes</h5>
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12">
+                    <InputTextArea @bind-Value="urUpdate.Notes" class="form-control" id="notes" rows="3" />
+                    <ValidationMessage For="@(() => urUpdate.Notes)" />
+                    <label for="notes">Reading notes</label>
+                </div>
+            </div>
+
+            <!-- Live preview -->
+            <h5 class="section-title mt-3">Preview</h5>
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                    <input type="text" class="form-control" id="previewDays" value="@DaysPreview" disabled>
+                    <label for="previewDays">Days billed</label>
+                </div>
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                    <input type="text" class="form-control" id="previewUsageCost" value="@UsageCostPreview.ToPounds(2)" disabled>
+                    <label for="previewUsageCost">Usage cost</label>
+                </div>
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                    <input type="text" class="form-control" id="previewStanding" value="@StandingTotalPreview.ToPounds(2)" disabled>
+                    <label for="previewStanding">Standing total</label>
+                </div>
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                    <input type="text" class="form-control" id="previewTotal" value="@TotalPreview.ToPounds(2)" disabled>
+                    <label for="previewTotal">Estimated total</label>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-start gap-2 mt-3 flex-wrap">
+                <button class="btn btn-primary" type="submit" style="min-width:160px">Save changes</button>
+                <button class="btn btn-secondary" type="button"
+                        formnovalidate
+                @onclick:preventDefault
+                        @onclick="GoBack">
+                    Cancel
+                </button>
+            </div>
+        </EditForm>
+    }
+</AccessLevelView>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private UtilityReadingUpdate urUpdate = new();
+    private List<UtilityType> UtilityTypes = new();
+    private bool isLoading = true;
+    private string? loadError;
+    private string? userID;
+
+    private readonly (decimal Factor, string Label)[] VatOptions =
+        [
+        (1.00m, "0%"),
+        (1.05m, "5%"),
+        (1.10m, "10%"),
+        (1.15m, "15%"),
+        (1.20m, "20%")
+    ];
+
+    private readonly Dictionary<string, string> UnitsByName =
+        new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Electricity"] = "kWh",
+                ["Gas"] = "m3",
+                ["Water-Hot"] = "m3",
+                ["Water-Cold"] = "m3"
+            };
+
+    private string CurrentUnitLabel =>
+        (currentUtilityTypeName is not null && UnitsByName.TryGetValue(currentUtilityTypeName, out var u))
+            ? u : "unit";
+
+    private string? currentUtilityTypeName =>
+        UtilityTypes.FirstOrDefault(t => t.Id == urUpdate.UtilityTypeId)?.Name;
+
+    // PREVIEW CALCS
+    private decimal UnitsPreview => Math.Max(0m, (urUpdate.MeterEnd ?? 0m) - (urUpdate.MeterStart ?? 0m));
+    private int DaysPreview => Math.Max(0, (int)(((urUpdate.ReadingEndDate?.Date ?? DateTime.MinValue)
+                       - (urUpdate.ReadingStartDate?.Date ?? DateTime.MinValue)).TotalDays));
+    private decimal? UsageCostPreview => UnitsPreview * urUpdate.UnitRate;
+    private decimal? StandingTotalPreview => DaysPreview * urUpdate.StandingChargePerDay;
+    private decimal? SubtotalPreview => UsageCostPreview + StandingTotalPreview;
+    private decimal? TotalPreview => SubtotalPreview * (urUpdate.VatRateFactor == 0 ? 1 : urUpdate.VatRateFactor);
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current user id
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var userName = authState.User.Identity?.Name;
+
+        // Use injected handler
+        var who = await IdentityUserHandler.GetUserIdByUsername(userName);
+        if (!who.IsSuccess || string.IsNullOrEmpty(who.Data))
+        {
+            NavManager.NavigateTo("/utility-readings");
+            return;
+        }
+        userID = who.Data;
+
+        // Load utility types (for drop-down)
+        var typesResult = await UtilityTypesHandler.GetAllUtilityTypes(true);
+        if (!typesResult.IsSuccess)
+        {
+            loadError = typesResult.ErrorMessage;
+            isLoading = false;
+            return;
+        }
+        UtilityTypes = typesResult.Data?.ToList() ?? [];
+
+        // Load the reading
+        var uRResult = await UtilityReadHandler.GetUtilityReadingsByID(userID, Id);
+        if (!uRResult.IsSuccess)
+        {
+            loadError = uRResult.ErrorMessage ?? "Failed to load the requested item.";
+            isLoading = false;
+            return;
+        }
+        var r = uRResult.Data?.FirstOrDefault();
+        if (r is null || r.Id < 1)
+        {
+            loadError = "The requested item was not found.";
+            isLoading = false;
+            NavManager.NavigateTo("/utility-readings");
+            return;
+        }
+
+        // Map to Update DTO
+        urUpdate = new UtilityReadingUpdate
+            {
+                Id = r.Id,
+                UtilityTypeId = r.UtilityTypeId,
+                UserId = r.UserId,
+                UnitRate = r.UnitRate,
+                StandingChargePerDay = r.StandingChargePerDay,
+                VatRateFactor = r.VatRateFactor,
+                ReadingStartDate = r.ReadingStartDate,
+                ReadingEndDate = r.ReadingEndDate,
+                MeterStart = r.MeterStart,
+                MeterEnd = r.MeterEnd,
+                ProviderDebitAmount = r.ProviderDebitAmount,
+                ProviderDebitDate = r.ProviderDebitDate,
+                Notes = r.Notes
+            };
+
+        isLoading = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (string.IsNullOrEmpty(userID))
+        {
+            ToastService.ShowError("Not signed in.");
+            return;
+        }
+
+        // Client-side checks (leave your business rules intact)
+        if (urUpdate.ReadingEndDate < urUpdate.ReadingStartDate)
+        {
+            ToastService.ShowError("End date must be on or after Start date.");
+            return;
+        }
+        if (urUpdate.MeterEnd < urUpdate.MeterStart)
+        {
+            ToastService.ShowError("Meter end must be >= Meter start.");
+            return;
+        }
+        if (urUpdate.UtilityTypeId == 4 && urUpdate.StandingChargePerDay != 0)
+        {
+            ToastService.ShowError("Hot Water must have Standing charge/day = 0.");
+            return;
+        }
+
+        // ✅ use injected handler
+        var result = await UtilityUpdateHandler.UpdateUtilityReading(urUpdate);
+        if (result.IsSuccess)
+        {
+            ToastService.ShowSuccess("Reading updated.");
+            NavManager.NavigateTo("/utility-readings");
+        }
+        else
+        {
+            ToastService.ShowError($"Update failed. {result.ErrorMessage}");
+        }
+    }
+
+    private void GoBack() => NavManager.NavigateTo($"/utility-readings/view/{urUpdate.Id}");
+}

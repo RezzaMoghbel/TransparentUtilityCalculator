@@ -1,0 +1,59 @@
+﻿<ErrorDialog_InvalidOperationException @ref="ErrorDialogRef" />
+
+<button type="button" disabled="@Disabled"
+        class="btn @(Activate ? "btn-outline-danger" : "btn-outline-success") @(ExtraStyleClass)"
+        @onclick="ShowConfirm">
+    <i class="bi @(Activate ? "bi-ban" : "bi-check-circle")"></i>
+</button>
+
+@if (showConfirmation)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title @(Activate ? "text-danger" : "text-success")">
+                        Confirm @(Activate ? "Deactivation" : "Activation")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseConfirm"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to @(Activate ? "deactivate" : "activate") @ActionName?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseConfirm">Cancel</button>
+                    <button class="btn @(Activate ? "btn-danger" : "btn-success")" @onclick="ConfirmAccessChange">
+                        @(Activate ? "Deactivate " : "Activate ") @ActionName
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public EventCallback OnAccessChange { get; set; }
+    [Parameter] public string ExtraStyleClass { get; set; } = string.Empty;
+    [Parameter] public bool Activate { get; set; } = true; // Default is disallow
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public string ActionName { get; set; } = "";
+    private ErrorDialog_InvalidOperationException? ErrorDialogRef;
+
+    private bool showConfirmation = false;
+
+    private void ShowConfirm() => showConfirmation = true;
+    private void CloseConfirm() => showConfirmation = false;
+
+    private async Task ConfirmAccessChange()
+    {
+        showConfirmation = false;
+
+        if (!OnAccessChange.HasDelegate)
+        {
+            ErrorDialogRef?.Show("Action is required.");
+            return;
+        }
+
+        await OnAccessChange.InvokeAsync();
+    }
+}
