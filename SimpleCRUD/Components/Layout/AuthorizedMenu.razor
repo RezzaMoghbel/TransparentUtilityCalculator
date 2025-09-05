@@ -1,6 +1,9 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
-@using SimpleCRUD.Components.Utils;
+@using SimpleCRUD.Components.Utils
+@using System.Reflection         
+@using System.Text.RegularExpressions
 @inject NavigationManager NavigationManager
+@inject IWebHostEnvironment HostEnv
 
 <div class="nav-item px-3">
     <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
@@ -14,9 +17,34 @@
     </NavLink>
 </div>
 
+<div class="nav-item px-3">
+    <span class="text-white ms-2" style="font-size:.72rem; letter-spacing:.02em;">@appVersion (@environmentName)</span>
+</div>
+
 @code {
-    [Parameter]
-    public string? CurrentUrl { get; set; }
-    [Parameter]
-    public string? UserName { get; set; }
+    [Parameter] public string? CurrentUrl { get; set; }
+    [Parameter] public string? UserName { get; set; }
+
+    private string environmentName = "";
+    private string appVersion = "";
+
+    protected override void OnInitialized()
+    {
+        environmentName = HostEnv.EnvironmentName;
+
+        var asm = Assembly.GetEntryAssembly();
+        var infoVer = asm?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
+        if (!string.IsNullOrWhiteSpace(infoVer))
+        {
+            // grab just "major.minor.patch" (e.g., 1.0.2 from "1.0.2+508c94f...")
+            var m = Regex.Match(infoVer, @"^\d+\.\d+\.\d+");
+            appVersion = m.Success ? "v"+m.Value : "v" + infoVer.Split('+')[0];
+        }
+        else
+        {
+            // fallback to assembly version (limit to 3 parts if present)
+            appVersion = "v" + asm?.GetName().Version?.ToString(3) ?? "0.0.0";
+        }
+    }
 }
