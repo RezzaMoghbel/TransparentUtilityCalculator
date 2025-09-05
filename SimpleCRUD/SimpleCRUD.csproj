@@ -6,6 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-SimpleCRUD-4495b195-10fd-47fb-8dc9-983ce5df42db</UserSecretsId>
     <Configurations>Development;Production;Staging</Configurations>
+    <Version>1.0.2</Version>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
