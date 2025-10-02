@@ -1,0 +1,184 @@
+2025-10-02 21:32:28.515 +01:00 [INF] === APPLICATION STARTING ===
+2025-10-02 21:32:29.450 +01:00 [INF] Current Directory: C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD
+2025-10-02 21:32:29.506 +01:00 [INF] Application Base Path: C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD\bin\Production\net9.0\
+2025-10-02 21:32:29.520 +01:00 [INF] Temp Directory: C:\Users\rmogh\AppData\Local\Temp\
+2025-10-02 21:32:29.988 +01:00 [INF] Logs Directory: C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD\logs
+2025-10-02 21:32:31.020 +01:00 [INF] Application starting - ENV=Development SERVER=HELLODIGI DB=UtilityCalculator
+2025-10-02 21:32:31.100 +01:00 [INF] Configuring database context...
+2025-10-02 21:32:31.175 +01:00 [INF] Database context configured successfully
+2025-10-02 21:32:31.641 +01:00 [INF] Configuring Identity services...
+2025-10-02 21:32:31.754 +01:00 [INF] Identity services configured successfully
+2025-10-02 21:32:31.864 +01:00 [INF] Building application...
+2025-10-02 21:32:32.224 +01:00 [INF] Application built successfully
+2025-10-02 21:32:32.603 +01:00 [INF] Configuring HTTP request pipeline for Development
+2025-10-02 21:32:32.670 +01:00 [INF] Using development configuration - enabling migrations endpoint
+2025-10-02 21:32:32.943 +01:00 [INF] User profile is available. Using 'C:\Users\rmogh\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2025-10-02 21:32:34.229 +01:00 [INF] Mapping application endpoints...
+2025-10-02 21:32:34.607 +01:00 [INF] Application endpoints mapped successfully
+2025-10-02 21:32:34.619 +01:00 [INF] Starting application...
+2025-10-02 21:32:36.108 +01:00 [INF] Now listening on: https://localhost:7136
+2025-10-02 21:32:36.135 +01:00 [INF] Now listening on: http://localhost:5153
+2025-10-02 21:32:36.231 +01:00 [INF] No action descriptors found. This may indicate an incorrectly configured application or missing application parts. To learn more, visit https://aka.ms/aspnet/mvc/app-parts
+2025-10-02 21:32:36.479 +01:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-02 21:32:36.491 +01:00 [INF] Hosting environment: Development
+2025-10-02 21:32:36.506 +01:00 [INF] Content root path: C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD
+2025-10-02 21:32:41.241 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/ - null null
+2025-10-02 21:32:43.203 +01:00 [INF] Authorization failed. These requirements were not met:
+DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+2025-10-02 21:32:43.218 +01:00 [INF] AuthenticationScheme: Identity.Application was challenged.
+2025-10-02 21:32:43.239 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/ - 302 0 null 2333.8897ms
+2025-10-02 21:32:43.250 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/Account/Login?ReturnUrl=%2F - null null
+2025-10-02 21:32:43.323 +01:00 [INF] Executing endpoint '/Account/Login (/Account/Login)'
+2025-10-02 21:32:45.230 +01:00 [INF] AuthenticationScheme: Identity.External signed out.
+2025-10-02 21:32:45.267 +01:00 [INF] Authorization failed. These requirements were not met:
+DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+2025-10-02 21:32:45.424 +01:00 [INF] Authorization failed. These requirements were not met:
+DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+2025-10-02 21:32:45.906 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/custom.7qdbfmxdvo.css - null null
+2025-10-02 21:32:46.061 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/img/TUC-Logo.png - null null
+2025-10-02 21:32:45.905 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/app.khy4lop6wu.css - null null
+2025-10-02 21:32:46.061 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/_framework/blazor.web.js - null null
+2025-10-02 21:32:46.239 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:32:46.022 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/SimpleCRUD.94xpy0js2r.styles.css - null null
+2025-10-02 21:32:45.896 +01:00 [INF] Executed endpoint '/Account/Login (/Account/Login)'
+2025-10-02 21:32:46.371 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:32:46.731 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:32:46.852 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:32:47.119 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/Account/Login?ReturnUrl=%2F - 200 null text/html; charset=utf-8 3867.0925ms
+2025-10-02 21:32:47.038 +01:00 [INF] Sending file. Request path: 'custom.7qdbfmxdvo.css'. Physical path: 'C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD\obj\Production\net9.0\compressed\8kzdjbvsh8-7qdbfmxdvo.gz'
+2025-10-02 21:32:46.826 +01:00 [INF] Executing endpoint 'Blazor web static files'
+2025-10-02 21:32:47.129 +01:00 [INF] The file img/TUC-Logo.png was not modified
+2025-10-02 21:32:47.161 +01:00 [INF] Sending file. Request path: 'app.khy4lop6wu.css'. Physical path: 'C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD\obj\Production\net9.0\compressed\y5l7rto5z3-khy4lop6wu.gz'
+2025-10-02 21:32:47.234 +01:00 [INF] Sending file. Request path: 'SimpleCRUD.94xpy0js2r.styles.css'. Physical path: 'C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD\obj\Production\net9.0\compressed\7gdxvzzl69-94xpy0js2r.gz'
+2025-10-02 21:32:47.253 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:32:47.277 +01:00 [INF] The file /_framework/blazor.web.js was not modified
+2025-10-02 21:32:47.285 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:32:47.315 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:32:47.336 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:32:47.349 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/custom.7qdbfmxdvo.css - 200 231 text/css 1443.5857ms
+2025-10-02 21:32:47.368 +01:00 [INF] Executed endpoint 'Blazor web static files'
+2025-10-02 21:32:47.384 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/img/TUC-Logo.png - 304 null image/png 1331.3524ms
+2025-10-02 21:32:47.392 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/_framework/aspnetcore-browser-refresh.js - null null
+2025-10-02 21:32:47.396 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/app.khy4lop6wu.css - 200 2933 text/css 1491.556ms
+2025-10-02 21:32:47.417 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/SimpleCRUD.94xpy0js2r.styles.css - 200 26345 text/css 1510.0102ms
+2025-10-02 21:32:47.433 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/_vs/browserLink - null null
+2025-10-02 21:32:47.454 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/img/logo.png - null null
+2025-10-02 21:32:48.316 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/_framework/blazor.web.js - 304 null text/javascript 2255.3205ms
+2025-10-02 21:32:48.851 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/_framework/aspnetcore-browser-refresh.js - 200 16505 application/javascript; charset=utf-8 1458.9823ms
+2025-10-02 21:32:49.264 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:32:49.337 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/_vs/browserLink - 200 null text/javascript; charset=UTF-8 1903.976ms
+2025-10-02 21:32:49.345 +01:00 [INF] The file img/logo.png was not modified
+2025-10-02 21:32:49.449 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:32:49.469 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/img/logo.png - 304 null image/png 2016.4078ms
+2025-10-02 21:32:51.413 +01:00 [INF] Request starting HTTP/2 POST https://localhost:7136/Account/Login?ReturnUrl=%2F - application/x-www-form-urlencoded 263
+2025-10-02 21:32:51.568 +01:00 [INF] Executing endpoint '/Account/Login (/Account/Login)'
+2025-10-02 21:32:51.743 +01:00 [INF] Authorization failed. These requirements were not met:
+DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+2025-10-02 21:32:51.801 +01:00 [INF] Authorization failed. These requirements were not met:
+DenyAnonymousAuthorizationRequirement: Requires an authenticated user.
+2025-10-02 21:32:56.599 +01:00 [INF] Executed DbCommand (294ms) [Parameters=[@__normalizedEmail_0='?' (Size = 256)], CommandType='"Text"', CommandTimeout='30']
+SELECT TOP(2) [a].[Id], [a].[AccessAllowed], [a].[AccessFailedCount], [a].[AccessLevelId], [a].[AddressLine1], [a].[AddressLine2], [a].[AddressLine3], [a].[BuildingId], [a].[ConcurrencyStamp], [a].[Country], [a].[Deleted], [a].[Email], [a].[EmailConfirmed], [a].[LockoutEnabled], [a].[LockoutEnd], [a].[NormalizedEmail], [a].[NormalizedUserName], [a].[PasswordHash], [a].[PhoneNumber], [a].[PhoneNumberConfirmed], [a].[Postcode], [a].[PropertyName], [a].[ProviderId], [a].[SecurityStamp], [a].[TwoFactorEnabled], [a].[UserName]
+FROM [AspNetUsers] AS [a]
+WHERE [a].[NormalizedEmail] = @__normalizedEmail_0
+2025-10-02 21:32:56.990 +01:00 [INF] Executed DbCommand (26ms) [Parameters=[@__normalizedUserName_0='?' (Size = 256)], CommandType='"Text"', CommandTimeout='30']
+SELECT TOP(1) [a].[Id], [a].[AccessAllowed], [a].[AccessFailedCount], [a].[AccessLevelId], [a].[AddressLine1], [a].[AddressLine2], [a].[AddressLine3], [a].[BuildingId], [a].[ConcurrencyStamp], [a].[Country], [a].[Deleted], [a].[Email], [a].[EmailConfirmed], [a].[LockoutEnabled], [a].[LockoutEnd], [a].[NormalizedEmail], [a].[NormalizedUserName], [a].[PasswordHash], [a].[PhoneNumber], [a].[PhoneNumberConfirmed], [a].[Postcode], [a].[PropertyName], [a].[ProviderId], [a].[SecurityStamp], [a].[TwoFactorEnabled], [a].[UserName]
+FROM [AspNetUsers] AS [a]
+WHERE [a].[NormalizedUserName] = @__normalizedUserName_0
+2025-10-02 21:32:57.059 +01:00 [INF] Executed DbCommand (2ms) [Parameters=[@__normalizedUserName_0='?' (Size = 256)], CommandType='"Text"', CommandTimeout='30']
+SELECT TOP(1) [a].[Id], [a].[AccessAllowed], [a].[AccessFailedCount], [a].[AccessLevelId], [a].[AddressLine1], [a].[AddressLine2], [a].[AddressLine3], [a].[BuildingId], [a].[ConcurrencyStamp], [a].[Country], [a].[Deleted], [a].[Email], [a].[EmailConfirmed], [a].[LockoutEnabled], [a].[LockoutEnd], [a].[NormalizedEmail], [a].[NormalizedUserName], [a].[PasswordHash], [a].[PhoneNumber], [a].[PhoneNumberConfirmed], [a].[Postcode], [a].[PropertyName], [a].[ProviderId], [a].[SecurityStamp], [a].[TwoFactorEnabled], [a].[UserName]
+FROM [AspNetUsers] AS [a]
+WHERE [a].[NormalizedUserName] = @__normalizedUserName_0
+2025-10-02 21:32:57.609 +01:00 [INF] Executed DbCommand (21ms) [Parameters=[@__user_Id_0='?' (Size = 450)], CommandType='"Text"', CommandTimeout='30']
+SELECT [a].[Id], [a].[ClaimType], [a].[ClaimValue], [a].[UserId]
+FROM [AspNetUserClaims] AS [a]
+WHERE [a].[UserId] = @__user_Id_0
+2025-10-02 21:32:57.662 +01:00 [INF] AuthenticationScheme: Identity.Application signed in.
+2025-10-02 21:32:57.706 +01:00 [INF] User logged in.
+2025-10-02 21:32:59.263 +01:00 [INF] Executed endpoint '/Account/Login (/Account/Login)'
+2025-10-02 21:32:59.272 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/ - null null
+2025-10-02 21:32:59.306 +01:00 [INF] Request finished HTTP/2 POST https://localhost:7136/Account/Login?ReturnUrl=%2F - 302 null text/html; charset=utf-8 7893.4919ms
+2025-10-02 21:32:59.316 +01:00 [INF] Executing endpoint '/ (/)'
+2025-10-02 21:32:59.870 +01:00 [INF] Executed DbCommand (19ms) [Parameters=[@__userId_0='?' (Size = 450)], CommandType='"Text"', CommandTimeout='30']
+SELECT TOP(1) [a].[Id], [a].[AccessAllowed], [a].[AccessFailedCount], [a].[AccessLevelId], [a].[AddressLine1], [a].[AddressLine2], [a].[AddressLine3], [a].[BuildingId], [a].[ConcurrencyStamp], [a].[Country], [a].[Deleted], [a].[Email], [a].[EmailConfirmed], [a].[LockoutEnabled], [a].[LockoutEnd], [a].[NormalizedEmail], [a].[NormalizedUserName], [a].[PasswordHash], [a].[PhoneNumber], [a].[PhoneNumberConfirmed], [a].[Postcode], [a].[PropertyName], [a].[ProviderId], [a].[SecurityStamp], [a].[TwoFactorEnabled], [a].[UserName], [a0].[Id], [a0].[Description], [a0].[Name]
+FROM [AspNetUsers] AS [a]
+INNER JOIN [AccessLevels] AS [a0] ON [a].[AccessLevelId] = [a0].[Id]
+WHERE [a].[Id] = @__userId_0
+2025-10-02 21:33:00.566 +01:00 [INF] Executed endpoint '/ (/)'
+2025-10-02 21:33:00.588 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/app.khy4lop6wu.css - null null
+2025-10-02 21:33:00.620 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/_framework/blazor.web.js - null null
+2025-10-02 21:33:00.618 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/img/TUC-Logo.png - null null
+2025-10-02 21:33:00.617 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/custom.7qdbfmxdvo.css - null null
+2025-10-02 21:33:00.588 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/SimpleCRUD.94xpy0js2r.styles.css - null null
+2025-10-02 21:33:00.724 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/ - 200 null text/html; charset=utf-8 1452.5553ms
+2025-10-02 21:33:00.740 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:00.805 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:00.805 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:00.805 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:00.805 +01:00 [INF] Executing endpoint 'Blazor web static files'
+2025-10-02 21:33:00.922 +01:00 [INF] Sending file. Request path: 'app.khy4lop6wu.css'. Physical path: 'C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD\obj\Production\net9.0\compressed\y5l7rto5z3-khy4lop6wu.gz'
+2025-10-02 21:33:00.924 +01:00 [INF] Sending file. Request path: 'custom.7qdbfmxdvo.css'. Physical path: 'C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD\obj\Production\net9.0\compressed\8kzdjbvsh8-7qdbfmxdvo.gz'
+2025-10-02 21:33:00.934 +01:00 [INF] Sending file. Request path: 'SimpleCRUD.94xpy0js2r.styles.css'. Physical path: 'C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD\obj\Production\net9.0\compressed\7gdxvzzl69-94xpy0js2r.gz'
+2025-10-02 21:33:00.935 +01:00 [INF] The file img/TUC-Logo.png was not modified
+2025-10-02 21:33:00.937 +01:00 [INF] The file /_framework/blazor.web.js was not modified
+2025-10-02 21:33:01.047 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:01.036 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:01.038 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:01.040 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:01.107 +01:00 [INF] Executed endpoint 'Blazor web static files'
+2025-10-02 21:33:01.110 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/img/TUC-Logo.png - 304 null image/png 492.0365ms
+2025-10-02 21:33:01.113 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/app.khy4lop6wu.css - 200 2933 text/css 525.6663ms
+2025-10-02 21:33:01.113 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/_framework/aspnetcore-browser-refresh.js - null null
+2025-10-02 21:33:01.116 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/custom.7qdbfmxdvo.css - 200 231 text/css 498.5812ms
+2025-10-02 21:33:01.118 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/SimpleCRUD.94xpy0js2r.styles.css - 200 26345 text/css 529.8545ms
+2025-10-02 21:33:01.128 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/_vs/browserLink - null null
+2025-10-02 21:33:01.230 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/_framework/blazor.web.js - 304 null text/javascript 610.1366ms
+2025-10-02 21:33:01.266 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/_blazor/initializers - null null
+2025-10-02 21:33:01.249 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/_framework/aspnetcore-browser-refresh.js - 200 16505 application/javascript; charset=utf-8 135.7308ms
+2025-10-02 21:33:01.313 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/_vs/browserLink - 200 null text/javascript; charset=UTF-8 185.3165ms
+2025-10-02 21:33:01.384 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:01.432 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:01.449 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/_blazor/initializers - 200 null application/json; charset=utf-8 183.2964ms
+2025-10-02 21:33:01.460 +01:00 [INF] Request starting HTTP/2 POST https://localhost:7136/_blazor/negotiate?negotiateVersion=1 - null 0
+2025-10-02 21:33:01.506 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:01.533 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:01.552 +01:00 [INF] Request finished HTTP/2 POST https://localhost:7136/_blazor/negotiate?negotiateVersion=1 - 200 316 application/json 91.6812ms
+2025-10-02 21:33:01.556 +01:00 [INF] Request starting HTTP/2 CONNECT https://localhost:7136/_blazor?id=zG9ZfRFSfmsijt1ztSU5Hg - null null
+2025-10-02 21:33:01.601 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:02.083 +01:00 [INF] Executed DbCommand (34ms) [Parameters=[@__userId_0='?' (Size = 450)], CommandType='"Text"', CommandTimeout='30']
+SELECT TOP(1) [a].[Id], [a].[AccessAllowed], [a].[AccessFailedCount], [a].[AccessLevelId], [a].[AddressLine1], [a].[AddressLine2], [a].[AddressLine3], [a].[BuildingId], [a].[ConcurrencyStamp], [a].[Country], [a].[Deleted], [a].[Email], [a].[EmailConfirmed], [a].[LockoutEnabled], [a].[LockoutEnd], [a].[NormalizedEmail], [a].[NormalizedUserName], [a].[PasswordHash], [a].[PhoneNumber], [a].[PhoneNumberConfirmed], [a].[Postcode], [a].[PropertyName], [a].[ProviderId], [a].[SecurityStamp], [a].[TwoFactorEnabled], [a].[UserName], [a0].[Id], [a0].[Description], [a0].[Name]
+FROM [AspNetUsers] AS [a]
+INNER JOIN [AccessLevels] AS [a0] ON [a].[AccessLevelId] = [a0].[Id]
+WHERE [a].[Id] = @__userId_0
+2025-10-02 21:33:02.160 +01:00 [INF] Request starting HTTP/2 GET https://localhost:7136/js/charts.ljtze7u1dq.js - null null
+2025-10-02 21:33:02.181 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:02.197 +01:00 [INF] Sending file. Request path: 'js/charts.ljtze7u1dq.js'. Physical path: 'C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD\obj\Production\net9.0\compressed\j3li1jm2gw-ljtze7u1dq.gz'
+2025-10-02 21:33:02.215 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:02.230 +01:00 [INF] Request finished HTTP/2 GET https://localhost:7136/js/charts.ljtze7u1dq.js - 200 1221 text/javascript 70.4904ms
+2025-10-02 21:33:10.489 +01:00 [INF] Request starting HTTP/2 POST https://localhost:7136/_blazor/disconnect - multipart/form-data; boundary=----WebKitFormBoundaryZ3dz1FsL4SaAAFal 359
+2025-10-02 21:33:10.574 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:10.819 +01:00 [INF] Executing endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:10.823 +01:00 [INF] Request finished HTTP/2 CONNECT https://localhost:7136/_blazor?id=zG9ZfRFSfmsijt1ztSU5Hg - 200 null null 9266.4309ms
+2025-10-02 21:33:10.948 +01:00 [INF] Executed endpoint 'Microsoft.AspNetCore.Routing.RouteEndpoint'
+2025-10-02 21:33:10.987 +01:00 [INF] Request finished HTTP/2 POST https://localhost:7136/_blazor/disconnect - 499 null null 497.6169ms
+2025-10-02 21:34:26.228 +01:00 [INF] === APPLICATION STARTING ===
+2025-10-02 21:34:26.334 +01:00 [INF] Current Directory: C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD
+2025-10-02 21:34:26.337 +01:00 [INF] Application Base Path: C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD\bin\Debug\net9.0\
+2025-10-02 21:34:26.337 +01:00 [INF] Temp Directory: C:\Users\rmogh\AppData\Local\Temp\
+2025-10-02 21:34:26.337 +01:00 [INF] Logs Directory: C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD\logs
+2025-10-02 21:34:26.396 +01:00 [INF] Application starting - ENV=Development SERVER=HELLODIGI DB=UtilityCalculator
+2025-10-02 21:34:26.396 +01:00 [INF] Configuring database context...
+2025-10-02 21:34:26.401 +01:00 [INF] Database context configured successfully
+2025-10-02 21:34:26.401 +01:00 [INF] Configuring Identity services...
+2025-10-02 21:34:26.412 +01:00 [INF] Identity services configured successfully
+2025-10-02 21:34:26.415 +01:00 [INF] Building application...
+2025-10-02 21:34:26.468 +01:00 [INF] Application built successfully
+2025-10-02 21:34:26.469 +01:00 [INF] Configuring HTTP request pipeline for Development
+2025-10-02 21:34:26.469 +01:00 [INF] Using development configuration - enabling migrations endpoint
+2025-10-02 21:34:26.500 +01:00 [INF] User profile is available. Using 'C:\Users\rmogh\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2025-10-02 21:34:26.512 +01:00 [INF] Mapping application endpoints...
+2025-10-02 21:34:26.625 +01:00 [INF] Application endpoints mapped successfully
+2025-10-02 21:34:26.625 +01:00 [INF] Starting application...
+2025-10-02 21:34:27.122 +01:00 [INF] Now listening on: http://localhost:5000
+2025-10-02 21:34:27.130 +01:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-02 21:34:27.131 +01:00 [INF] Hosting environment: Development
+2025-10-02 21:34:27.131 +01:00 [INF] Content root path: C:\Users\rmogh\source\repos\TransparentUtilityCalculator\SimpleCRUD

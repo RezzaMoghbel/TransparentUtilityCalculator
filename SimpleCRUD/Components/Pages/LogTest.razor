@@ -1,0 +1,139 @@
+@page "/log-test"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Serilog
+@using System.IO
+@inject NavigationManager NavManager
+
+<PageTitle>Log Test & Diagnostics</PageTitle>
+
+<div class="container mt-4">
+    <h2>Serilog Test & Diagnostics Page</h2>
+    <p>This page tests Serilog logging functionality and shows log file locations.</p>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <h4>Log File Locations:</h4>
+            <ul>
+                <li><strong>Primary:</strong> @primaryLogPath</li>
+                <li><strong>Fallback 1:</strong> @fallbackLogPath</li>
+                <li><strong>Fallback 2:</strong> @tempLogPath</li>
+            </ul>
+            
+            <h4>Directory Information:</h4>
+            <ul>
+                <li><strong>Current Directory:</strong> @currentDirectory</li>
+                <li><strong>Application Base:</strong> @appBaseDirectory</li>
+                <li><strong>Temp Directory:</strong> @tempDirectory</li>
+            </ul>
+            
+            <h4>Test Logging:</h4>
+            <div class="mb-3">
+                <button class="btn btn-primary me-2" @onclick="TestInfoLog">Test Info Log</button>
+                <button class="btn btn-warning me-2" @onclick="TestWarningLog">Test Warning Log</button>
+                <button class="btn btn-danger me-2" @onclick="TestErrorLog">Test Error Log</button>
+                <button class="btn btn-info me-2" @onclick="TestStartupLog">Test Startup Log</button>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(message))
+            {
+                <div class="alert alert-info mt-3">
+                    @message
+                </div>
+            }
+            
+            <h4>File Existence Check:</h4>
+            <ul>
+                <li><strong>Logs folder exists:</strong> @logsFolderExists</li>
+                <li><strong>Primary log file exists:</strong> @primaryLogExists</li>
+                <li><strong>Fallback log file exists:</strong> @fallbackLogExists</li>
+                <li><strong>Temp log file exists:</strong> @tempLogExists</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="mt-3">
+        <button class="btn btn-secondary" @onclick="GoBack">Back to Home</button>
+    </div>
+</div>
+
+@code {
+    private string message = string.Empty;
+    private string currentDirectory = Directory.GetCurrentDirectory();
+    private string appBaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+    private string tempDirectory = Path.GetTempPath();
+    private string primaryLogPath = Path.Combine("logs", $"log-{DateTime.Now:yyyy-MM-dd}.txt");
+    private string fallbackLogPath = $"application-log-{DateTime.Now:yyyy-MM-dd}.txt";
+    private string tempLogPath = Path.Combine(Path.GetTempPath(), $"SimpleCRUD-log-{DateTime.Now:yyyy-MM-dd}.txt");
+    
+    private bool logsFolderExists;
+    private bool primaryLogExists;
+    private bool fallbackLogExists;
+    private bool tempLogExists;
+
+    protected override void OnInitialized()
+    {
+        Log.Information("LogTest page initialized - User: {User}, Time: {Time}", 
+            "TestUser", DateTime.Now);
+        
+        // Initialize file existence checks
+        logsFolderExists = Directory.Exists("logs");
+        primaryLogExists = File.Exists(primaryLogPath);
+        fallbackLogExists = File.Exists(fallbackLogPath);
+        tempLogExists = File.Exists(tempLogPath);
+    }
+
+    private void TestInfoLog()
+    {
+        Log.Information("Test info log from LogTest page - User: {User}, Time: {Time}", 
+            "TestUser", DateTime.Now);
+        message = "Info log sent! Check the log files.";
+        RefreshFileStatus();
+    }
+
+    private void TestWarningLog()
+    {
+        Log.Warning("Test warning log from LogTest page - This is a test warning at {Time}", DateTime.Now);
+        message = "Warning log sent! Check the log files.";
+        RefreshFileStatus();
+    }
+
+    private void TestErrorLog()
+    {
+        try
+        {
+            throw new InvalidOperationException("This is a test exception for logging");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Test error log from LogTest page - This is a test error at {Time}", DateTime.Now);
+            message = "Error log sent! Check the log files.";
+            RefreshFileStatus();
+        }
+    }
+
+    private void TestStartupLog()
+    {
+        Log.Information("=== STARTUP TEST LOG ===");
+        Log.Information("Application is running and logging is working!");
+        Log.Information("Current time: {Time}", DateTime.Now);
+        Log.Information("User accessing test page: {User}", "TestUser");
+        Log.Information("=== END STARTUP TEST LOG ===");
+        message = "Startup test log sent! This should appear in all log files.";
+        RefreshFileStatus();
+    }
+
+    private void RefreshFileStatus()
+    {
+        logsFolderExists = Directory.Exists("logs");
+        primaryLogExists = File.Exists(primaryLogPath);
+        fallbackLogExists = File.Exists(fallbackLogPath);
+        tempLogExists = File.Exists(tempLogPath);
+        StateHasChanged();
+    }
+
+    private void GoBack()
+    {
+        NavManager.NavigateTo("/");
+    }
+}

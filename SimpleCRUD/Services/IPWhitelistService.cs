@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SimpleCRUD.Data.Models;
+using Serilog;
 
 namespace SimpleCRUD.Services
 {
@@ -7,19 +8,30 @@ namespace SimpleCRUD.Services
     {
         public async Task<bool> IsIPAllowedAsync(string ipAddress, string? userId)
         {
-            var now = DateTime.UtcNow;
-            if (string.IsNullOrWhiteSpace(ipAddress))
+            try
             {
-                return false; // Invalid IP address
+                var now = DateTime.UtcNow;
+                Log.Debug("Checking IP access for IP: {IP}, UserId: {UserId}", ipAddress, userId);
+                
+                if (string.IsNullOrWhiteSpace(ipAddress))
+                {
+                    Log.Warning("Invalid IP address provided: {IP}", ipAddress);
+                    return false; // Invalid IP address
+                }
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    Log.Debug("No user ID provided, checking pre-login access");
+                    return await IsIPAllowedBeforeLogginAsync(ipAddress, now);
+                }
+                
+                Log.Debug("User ID provided, checking post-login access");
+                return await IsIPAllowedAfterLogginAsync(ipAddress, userId, now);
             }
-            if (string.IsNullOrWhiteSpace(userId))
+            catch (Exception ex)
             {
-                return await IsIPAllowedBeforeLogginAsync(ipAddress, now);
-
+                Log.Error(ex, "Error checking IP access for IP: {IP}, UserId: {UserId}", ipAddress, userId);
+                return false; // Fail closed for security
             }
-            return await IsIPAllowedAfterLogginAsync(ipAddress, userId, now);
-
-
         }
         private async Task<bool> IsIPAllowedBeforeLogginAsync(string ipAddress, DateTime now)
         {
@@ -58,10 +70,14 @@ namespace SimpleCRUD.Services
         {
             try
             {
-                return await dbContext.IPWhitelists.AnyAsync();
+                Log.Debug("Checking if any IP whitelist entries exist");
+                var result = await dbContext.IPWhitelists.AnyAsync();
+                Log.Debug("IP whitelist check result: {Result}", result);
+                return result;
             }
-            catch
+            catch (Exception ex)
             {
+                Log.Error(ex, "Error checking IP whitelist configuration");
                 return false;
             }
         }
