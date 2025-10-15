@@ -100,6 +100,25 @@
     <Build Include="identity\Stored Procedures\ActiveUser_GetExtrasInfo_ByUserName.sql" />
     <Build Include="identity\Stored Procedures\ActiveUser_GetByUserName.sql" />
     <Build Include="Security\identity.sql" />
+    <Build Include="utility\Tables\DirectDebits.sql" />
+    <Build Include="utility\Tables\DirectDebitReadings.sql" />
+    <Build Include="utility\Stored Procedures\UtilityReadings_GetAvailableForLinking.sql" />
+    <Build Include="utility\Stored Procedures\rpt_DirectDebits_Summary.sql" />
+    <Build Include="utility\Stored Procedures\rpt_DirectDebits_OverallSummary.sql" />
+    <Build Include="utility\Stored Procedures\rpt_DirectDebits_MonthlyComparison.sql" />
+    <Build Include="utility\Stored Procedures\rpt_DirectDebits_BalanceById.sql" />
+    <Build Include="utility\Stored Procedures\rpt_DirectDebits_Balance.sql" />
+    <Build Include="utility\Stored Procedures\DirectDebits_Update.sql" />
+    <Build Include="utility\Stored Procedures\DirectDebits_ListByUser.sql" />
+    <Build Include="utility\Stored Procedures\DirectDebits_ListByDate.sql" />
+    <Build Include="utility\Stored Procedures\DirectDebits_Insert.sql" />
+    <Build Include="utility\Stored Procedures\DirectDebits_GetById.sql" />
+    <Build Include="utility\Stored Procedures\DirectDebits_Delete.sql" />
+    <Build Include="utility\Stored Procedures\DirectDebitReadings_Unlink.sql" />
+    <Build Include="utility\Stored Procedures\DirectDebitReadings_Link.sql" />
+    <Build Include="utility\Stored Procedures\DirectDebitReadings_GetByReading.sql" />
+    <Build Include="utility\Stored Procedures\DirectDebitReadings_GetByDirectDebit.sql" />
+    <Build Include="dbo\Stored Procedures\UtilityProviders_GetAllActive_1.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="utility\Scripts\Script.PostDeployment.UtilityType.sql" />
