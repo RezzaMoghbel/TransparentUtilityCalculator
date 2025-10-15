@@ -6,13 +6,16 @@
 @using SimpleCRUD.Components.Reuseables.Toasts
 @using SimpleCRUD.Components.Utils
 @using SimpleCRUD.DTO.Utility.Reports
+@using SimpleCRUD.DTO.Utility.DirectDebits
 @using SimpleCRUD.Services
 @using SimpleCRUD.Engine.Test
+@using SimpleCRUD.Engine.DirectDebit
 @inject AuthenticationStateProvider AuthProvider
 @inject ToastService ToastService
 
 @inject IdentityUserHandler<string> IdentityUserHandler
 @inject UtilityReportHandler<MonthlyAmountPoint> UtilityReportHandler
+@inject DirectDebitHandler<DirectDebitOverallSummary> OverallSummaryHandler
 
 <Toast />
 
@@ -29,6 +32,7 @@
                          AmountSelector="p => p.TotalAmount"
                          CurrencySymbol="£" />
 
+
     <div class="row g-3 py-3">
         <div class="col-12 col-md-6 col-lg-4">
             <div class="card h-100">
@@ -39,13 +43,104 @@
                 </div>
             </div>
         </div>
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">Direct Debits</h5>
+                    <p class="card-text">A comprehensive list of your monthly payments towards your utility bills.</p>
+                    <a href="/direct-debits" class="btn btn-primary d-block mt-auto">View</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">Direct Debit Balance</h5>
+                    <p class="card-text">View balance between direct debits and linked utility readings.</p>
+                    <a href="/reports/direct-debit-balance" class="btn btn-primary d-block mt-auto">View Report</a>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Overall Balance Summary -->
+    @if (overallSummary is not null && overallSummary.Any())
+    {
+        var allTime = overallSummary.FirstOrDefault(s => s.Period == "AllTime");
+        var currentYear = overallSummary.FirstOrDefault(s => s.Period == "CurrentYear");
+        <div class="row g-3 py-3">
+            @if (allTime is not null && allTime.HasOverYearData)
+            {
+                <div class="col-12 @(currentYear is not null ? "col-lg-6" : "")">
+                    <div class="card border-@GetBorderColorClass(allTime.BalanceStatus)">
+                        <div class="card-header bg-@GetBorderColorClass(allTime.BalanceStatus) text-white">
+                            <h5 class="mb-0">Overall Balance (All Time)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <h6 class="text-muted mb-1">Total Paid</h6>
+                                    <h4 class="text-primary">@allTime.TotalDirectDebits.ToPounds(2)</h4>
+                                </div>
+                                <div class="col-4">
+                                    <h6 class="text-muted mb-1">Total Usage</h6>
+                                    <h4 class="text-info">@allTime.TotalLinkedReadings.ToPounds(2)</h4>
+                                </div>
+                                <div class="col-4">
+                                    <h6 class="text-muted mb-1">Balance</h6>
+                                    <h4 class="text-@GetBalanceTextColorClass(allTime.BalanceStatus)">
+                                        @allTime.Balance.ToPounds(2)
+                                    </h4>
+                                    <span class="badge bg-@GetBorderColorClass(allTime.BalanceStatus)">
+                                        @allTime.BalanceStatus
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (currentYear is not null)
+            {
+                <div class="col-12 @(allTime is not null && allTime.HasOverYearData ? "col-lg-6" : "")">
+                    <div class="card border-@GetBorderColorClass(currentYear.BalanceStatus)">
+                        <div class="card-header bg-@GetBorderColorClass(currentYear.BalanceStatus) text-white">
+                            <h5 class="mb-0">@(allTime is not null && allTime.HasOverYearData ? "Balance (Current Year)" : "Overall Balance")</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <h6 class="text-muted mb-1">Total Paid</h6>
+                                    <h4 class="text-primary">@currentYear.TotalDirectDebits.ToPounds(2)</h4>
+                                </div>
+                                <div class="col-4">
+                                    <h6 class="text-muted mb-1">Total Usage</h6>
+                                    <h4 class="text-info">@currentYear.TotalLinkedReadings.ToPounds(2)</h4>
+                                </div>
+                                <div class="col-4">
+                                    <h6 class="text-muted mb-1">Balance</h6>
+                                    <h4 class="text-@GetBalanceTextColorClass(currentYear.BalanceStatus)">
+                                        @currentYear.Balance.ToPounds(2)
+                                    </h4>
+                                    <span class="badge bg-@GetBorderColorClass(currentYear.BalanceStatus)">
+                                        @currentYear.BalanceStatus
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 </AccessLevelView>
 
 @code {
     private IEnumerable<MonthlyAmountPoint>? elecChartAmount;
     private IEnumerable<MonthlyAmountPoint>? waterColdChartAmount;
     private IEnumerable<MonthlyAmountPoint>? WaterHotChartAmount;
+    private IEnumerable<DirectDebitOverallSummary>? overallSummary;
 
     private string? userName;
     private string? userID;
@@ -68,5 +163,28 @@
         elecChartAmount = electricityAmount?.Data;
         waterColdChartAmount = waterColdAmount?.Data;
         WaterHotChartAmount = waterHotAmount?.Data;
+
+        // Load overall summary
+        var summaryResult = await OverallSummaryHandler.GetOverallSummary(userID);
+        if (summaryResult.IsSuccess)
+        {
+            overallSummary = summaryResult.Data;
+        }
     }
+
+    private string GetBorderColorClass(string status) => status switch
+    {
+        "Exact" => "success",
+        "Overpaid" => "warning",
+        "Underpaid" => "danger",
+        _ => "secondary"
+    };
+
+    private string GetBalanceTextColorClass(string status) => status switch
+    {
+        "Exact" => "success",
+        "Overpaid" => "warning",
+        "Underpaid" => "danger",
+        _ => "muted"
+    };
 }
