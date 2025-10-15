@@ -1,0 +1,165 @@
+@page "/direct-debits/create"
+@attribute [Authorize]
+
+@using SimpleCRUD.Components.Utils
+@using SimpleCRUD.DTO.Utility.DirectDebits
+@using SimpleCRUD.DTO.Identity
+@using SimpleCRUD.Services
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using System.Globalization
+@using SimpleCRUD.Engine.DirectDebit
+
+@inject NavigationManager NavManager
+@inject ToastService ToastService
+@inject AuthenticationStateProvider AuthProvider
+
+<!--Inject your handlers -->
+@inject IdentityUserHandler<string> IdentityUserHandler
+@inject DirectDebitHandler<DirectDebitCreate> DirectDebitCreateHandler
+@inject DirectDebitHandler<UtilityProvider> ProvidersHandler
+
+@rendermode InteractiveServer
+
+<Toast />
+
+<AccessLevelView>
+    <PageTitle>Create new Direct Debit</PageTitle>
+
+    <h3>Create a new direct debit</h3>
+
+    @if (isLoading)
+    {
+        <p>Loading...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <p class="text-danger">@loadError</p>
+    }
+    else
+    {
+        <EditForm Model="ddCreate" OnValidSubmit="HandleValidSubmit" FormName="createDirectDebitForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="row g-4">
+                <div class="form-floating mb-4 col">
+                    <InputNumber @bind-Value="ddCreate.Amount" class="form-control" id="amount" step="0.01" min="0.01" />
+                    <ValidationMessage For="@(() => ddCreate.Amount)" />
+                    <label for="amount">Amount (£)</label>
+                </div>
+
+                <div class="form-floating mb-4 col">
+                    <InputDate @bind-Value="ddCreate.PaymentDate" class="form-control" id="paymentDate" />
+                    <ValidationMessage For="@(() => ddCreate.PaymentDate)" />
+                    <label for="paymentDate">Payment Date (DD-MM-YYYY)</label>
+                </div>
+
+                <div class="form-floating mb-4 col">
+                    <InputSelect @bind-Value="ddCreate.UtilityProviderId" class="form-control" id="utilityProviderId">
+                        <option value="">Select a provider (Optional)</option>
+                        @if (providersResult?.Data != null)
+                        {
+                            @foreach (var provider in providersResult.Data)
+                            {
+                                <option value="@provider.Id">@provider.Name</option>
+                            }
+                        }
+                    </InputSelect>
+                    <label for="utilityProviderId">Utility Provider</label>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="form-floating mb-4 col">
+                    <InputSelect @bind-Value="ddCreate.PaymentStatus" class="form-control" id="paymentStatus">
+                        <option value="Pending">Pending</option>
+                        <option value="Paid" selected>Paid</option>
+                        <option value="Failed">Failed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => ddCreate.PaymentStatus)" />
+                    <label for="paymentStatus">Payment Status</label>
+                </div>
+            </div>
+
+            <div class="row g-2">
+                <div class="form-floating mb-2 col">
+                    <InputTextArea @bind-Value="ddCreate.Notes" class="form-control" id="notes" />
+                    <ValidationMessage For="@(() => ddCreate.Notes)" />
+                    <label for="notes">Notes</label>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-start gap-2 mt-3" style="flex-direction: row-reverse;">
+                <button class="btn btn-primary" type="submit" style="width: 200px">Save</button>
+                <span style="padding-left:20px"></span>
+                <button class="btn btn-secondary" type="button"
+                        formnovalidate
+                @onclick:preventDefault
+                        @onclick="GoBack">
+                    Cancel
+                </button>
+            </div>
+        </EditForm>
+    }
+</AccessLevelView>
+
+@code {
+    private DirectDebitCreate ddCreate = new();
+    private Result<IEnumerable<UtilityProvider>>? providersResult;
+    private bool isLoading = true;
+    private string? loadError;
+    private string? userName;
+    private string? userID;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userName = authState.User.Identity?.Name;
+
+        var idResult = await IdentityUserHandler.GetUserIdByUsername(userName);
+        userID = idResult.Data;
+
+        if (!string.IsNullOrEmpty(userID))
+        {
+            ddCreate.UserId = userID;
+        }
+
+        // Load providers
+        providersResult = await ProvidersHandler.GetAllActiveProviders();
+
+        if (!providersResult.IsSuccess)
+        {
+            loadError = providersResult?.ErrorMessage;
+            isLoading = false;
+            return;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (string.IsNullOrEmpty(userID))
+        {
+            ToastService.ShowError($"Failed to create a new direct debit, try again later!");
+            return;
+        }
+
+        var result = await DirectDebitCreateHandler.CreateDirectDebit(ddCreate);
+
+        if (result.IsSuccess)
+        {
+            ToastService.ShowSuccess("Direct debit added!");
+            NavManager.NavigateTo("/direct-debits");
+        }
+        else
+        {
+            ToastService.ShowError($"Failed to create a new direct debit, try again later! {result.ErrorMessage}");
+        }
+    }
+
+    private void GoBack() => NavManager.NavigateTo("/direct-debits");
+}

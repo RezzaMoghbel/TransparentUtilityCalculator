@@ -1,0 +1,427 @@
+@page "/direct-debits/view/{Id}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Components           <!-- for [Parameter] -->
+@using Microsoft.AspNetCore.Components.Web       <!-- for ChangeEventArgs -->
+@using SimpleCRUD.Components.Utils
+@using SimpleCRUD.DTO.Utility.DirectDebits
+@using SimpleCRUD.DTO.Utility.Readings
+@using SimpleCRUD.DTO.Identity
+@using SimpleCRUD.DTO.Identity.Responses          <!-- for Result<T> -->
+@using SimpleCRUD.Services
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using System.Globalization
+@using SimpleCRUD.Components.Reuseables.Utility
+@using SimpleCRUD.Engine.DirectDebit
+@using SimpleCRUD.Engine.Test
+@inject NavigationManager NavManager
+@inject ToastService ToastService
+@inject AuthenticationStateProvider AuthProvider
+
+<!-- ✅ inject handlers instead of "new" -->
+@inject IdentityUserHandler<string> IdentityUserHandler
+@inject DirectDebitHandler<DirectDebit> DirectDebitHandler
+@inject DirectDebitHandler<UtilityReading> DirectDebitReadingsHandler
+@inject DirectDebitHandler<UtilityReading> AvailableReadingsHandler
+
+<style>
+    .readonly-box {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    @@media (max-width: 576px) {
+        .form-floating > label {
+            font-size: .9rem;
+        }
+
+        .section-title {
+            margin-top: .75rem;
+        }
+    }
+</style>
+
+<Toast />
+
+<AccessLevelView>
+    <PageTitle>@(dd?.ProviderName is null ? "Direct Debit" : $"{dd.ProviderName} Direct Debit")</PageTitle>
+
+    <h3 class="py-3">
+        Direct Debit Details
+        <span class="badge @GetStatusBadgeClass(dd?.PaymentStatus ?? "") ms-2">@(dd?.PaymentStatus ?? "")</span>
+    </h3>
+
+    @if (isLoading)
+    {
+        <p>Loading the requested item...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <p class="text-danger">@loadError</p>
+    }
+    else
+    {
+        <!-- Payment Details -->
+        <div class="row g-3">
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@(dd?.PaymentDate.ToString("yyyy MMM dd") ?? "")" class="form-control" id="paymentDate" disabled>
+                <label for="paymentDate">Payment Date</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@(dd?.Amount.ToPounds(2) ?? "")" class="form-control" id="amount" disabled>
+                <label for="amount">Amount</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@(dd?.ProviderName ?? "N/A")" class="form-control" id="providerName" disabled>
+                <label for="providerName">Provider</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@(dd?.CreatedAt.ToString("yyyy MMM dd") ?? "")" class="form-control" id="createdAt" disabled>
+                <label for="createdAt">Created</label>
+            </div>
+        </div>
+
+        <!-- Link New Readings -->
+        <h5 class="section-title mt-3">Link New Readings</h5>
+        @if (availableReadingsResult is null)
+        {
+            <p>Loading available readings...</p>
+        }
+        else if (!availableReadingsResult.IsSuccess)
+        {
+            <p class="text-danger">Error loading available readings: @availableReadingsResult.ErrorMessage</p>
+        }
+        else if (availableReadings.Count == 0)
+        {
+            <p>No readings available to link (all readings are already linked to direct debits).</p>
+        }
+        else
+        {
+            <div class="mb-3">
+                <p class="text-muted">Select readings to link to this direct debit. Each reading can only be linked to one direct debit, and each direct debit can only have one reading per utility type.</p>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Select</th>
+                            <th>Type</th>
+                            <th>Period</th>
+                            <th>Units Used</th>
+                            <th>Total Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var reading in availableReadings)
+                        {
+                            var isDisabled = linkedReadings.Any(lr => lr.UtilityTypeId == reading.UtilityTypeId);
+                            <tr class="@(isDisabled ? "table-warning" : "")">
+                                <td>
+                                    <input type="checkbox" 
+                                           class="form-check-input" 
+                                           value="@reading.Id"
+                                           disabled="@isDisabled"
+                                           @onchange="@(async (e) => await OnReadingSelectionChanged(reading.Id, e))" />
+                                </td>
+                                <td>@reading.UtilityType</td>
+                                <td>@reading.ReadingStartDate.ToString("yyyy-MMM-dd") to @reading.ReadingEndDate.ToString("yyyy-MMM-dd")</td>
+                                <td>@reading.UnitsUsed</td>
+                                <td>@reading.Total.ToPounds(2)</td>
+                            </tr>
+                            @if (isDisabled)
+                            {
+                                <tr class="table-warning">
+                                    <td colspan="5" class="text-warning small">
+                                        ⚠️ This direct debit already has a @reading.UtilityType reading linked
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+            
+            @if (selectedReadings.Count > 0)
+            {
+                <div class="mt-3">
+                    <button class="btn btn-primary" @onclick="LinkSelectedReadings" disabled="@isLinking">
+                        @if (isLinking)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Link Selected Readings (@selectedReadings.Count)
+                    </button>
+                </div>
+            }
+        }
+
+        <!-- Notes -->
+        <h5 class="section-title mt-3">Notes</h5>
+        <div class="row g-3">
+            <div class="mb-2 col-12">
+                <textarea class="form-control readonly-box" id="notes" rows="3" readonly>@(dd.Notes ?? "No notes")</textarea>
+            </div>
+        </div>
+
+        <!-- Linked Readings -->
+        <h5 class="section-title mt-3">Linked Readings</h5>
+        @if (linkedReadingsResult is null)
+        {
+            <p>Loading linked readings...</p>
+        }
+        else if (!linkedReadingsResult.IsSuccess)
+        {
+            <p class="text-danger">Error loading linked readings: @linkedReadingsResult.ErrorMessage</p>
+        }
+        else if (linkedReadings.Count == 0)
+        {
+            <p>No readings linked to this direct debit.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Period</th>
+                            <th>Units Used</th>
+                            <th>Total Cost</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var reading in linkedReadings)
+                        {
+                            <tr>
+                                <td>@reading.UtilityType</td>
+                                <td>@reading.ReadingStartDate.ToString("yyyy-MMM-dd") to @reading.ReadingEndDate.ToString("yyyy-MMM-dd")</td>
+                                <td>@reading.UnitsUsed</td>
+                                <td>@reading.Total.ToPounds(2)</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            @onclick="() => UnlinkReading(reading.Id)"
+                                            title="Unlink this reading">
+                                        Unlink
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <div class="d-flex align-items-center mt-3 flex-wrap">
+            <button class="btn btn-secondary" type="button"
+                    formnovalidate @onclick:preventDefault @onclick="GoBack">
+                Back
+            </button>
+
+            <div class="ms-auto d-flex" style="gap:20px">
+                <EditButton Route="@($"/direct-debits/update/{dd.Id}")" DisplayTitle="true" />
+                <DeleteButton OnDelete="@(DeleteDirectDebit)" DisplayTitle="true" />
+            </div>
+        </div>
+    }
+</AccessLevelView>
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private DirectDebit dd = new();
+    private bool isLoading = true;
+    private string? loadError;
+    private string? userName;
+    private string? userID;
+
+    private Result<IEnumerable<UtilityReading>>? linkedReadingsResult;
+    private List<UtilityReading> linkedReadings = new();
+
+    private Result<IEnumerable<UtilityReading>>? availableReadingsResult;
+    private List<UtilityReading> availableReadings = new();
+    private List<int> selectedReadings = new();
+    private bool isLinking = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(Id) || !int.TryParse(Id, out var directDebitId) || directDebitId < 1)
+        {
+            NavManager.NavigateTo("/direct-debits");
+            return;
+        }
+
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userName = authState.User.Identity?.Name;
+
+        var result = await IdentityUserHandler.GetUserIdByUsername(userName);
+        userID = result.Data;
+
+        if (string.IsNullOrEmpty(userID))
+        {
+            NavManager.NavigateTo("/direct-debits");
+            return;
+        }
+
+        var ddResult = await DirectDebitHandler.GetDirectDebitById(userID, directDebitId);
+
+        if (!ddResult.IsSuccess)
+        {
+            loadError = ddResult?.ErrorMessage ?? "Failed to load the requested item.";
+            isLoading = false;
+            return;
+        }
+
+        dd = ddResult.Data?.FirstOrDefault() ?? new DirectDebit();
+        if (dd.Id < 1)
+        {
+            loadError = "The requested item was not found.";
+            isLoading = false;
+            NavManager.NavigateTo("/direct-debits");
+            return;
+        }
+
+        // Load linked readings
+        await LoadLinkedReadings(directDebitId);
+
+        // Load available readings
+        await LoadAvailableReadings();
+
+        isLoading = false;
+    }
+
+    private async Task LoadLinkedReadings(int directDebitId)
+    {
+        linkedReadingsResult = await DirectDebitReadingsHandler.GetReadingsForDirectDebit(directDebitId, userID!);
+        if (linkedReadingsResult.IsSuccess)
+        {
+            linkedReadings = linkedReadingsResult.Data?.ToList() ?? new List<UtilityReading>();
+        }
+    }
+
+    private void GoBack() => NavManager.NavigateTo("/direct-debits");
+
+    private async Task DeleteDirectDebit()
+    {
+        if (userID is null || dd.Id < 1)
+        {
+            ToastService?.ShowError("Failed to delete direct debit, try again later!");
+            return;
+        }
+
+        var deleteRequest = new DirectDebitDeleteRequest { Id = dd.Id, UserId = userID };
+        var result = await DirectDebitHandler.DeleteDirectDebit(deleteRequest);
+
+        if (!result.IsSuccess)
+        {
+            ToastService?.ShowError($"Failed to delete direct debit: {result.ErrorMessage}");
+            return;
+        }
+
+        ToastService?.ShowSuccess("Direct debit deleted successfully.");
+        NavManager.NavigateTo("/direct-debits");
+    }
+
+    private async Task UnlinkReading(int readingId)
+    {
+        if (userID is null || dd.Id < 1)
+        {
+            ToastService?.ShowError("Failed to unlink reading, try again later!");
+            return;
+        }
+
+        var result = await DirectDebitReadingsHandler.UnlinkReadingFromDirectDebit(dd.Id, readingId, userID);
+
+        if (result.IsSuccess)
+        {
+            ToastService?.ShowSuccess("Reading unlinked successfully.");
+            await LoadLinkedReadings(dd.Id);
+            StateHasChanged();
+        }
+        else
+        {
+            ToastService?.ShowError($"Failed to unlink reading: {result.ErrorMessage}");
+        }
+    }
+
+    private async Task LoadAvailableReadings()
+    {
+        availableReadingsResult = await AvailableReadingsHandler.GetAvailableReadingsForLinking(userID!);
+        if (availableReadingsResult.IsSuccess)
+        {
+            availableReadings = availableReadingsResult.Data?.ToList() ?? new List<UtilityReading>();
+        }
+    }
+
+    private Task OnReadingSelectionChanged(int readingId, ChangeEventArgs e)
+    {
+        var isChecked = (bool)(e.Value ?? false);
+        
+        if (isChecked)
+        {
+            if (!selectedReadings.Contains(readingId))
+                selectedReadings.Add(readingId);
+        }
+        else
+        {
+            selectedReadings.Remove(readingId);
+        }
+        
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task LinkSelectedReadings()
+    {
+        if (userID is null || dd.Id < 1 || selectedReadings.Count == 0)
+        {
+            ToastService?.ShowError("Failed to link readings, try again later!");
+            return;
+        }
+
+        isLinking = true;
+        StateHasChanged();
+
+        var successCount = 0;
+        var errorCount = 0;
+
+        foreach (var readingId in selectedReadings)
+        {
+            var result = await DirectDebitReadingsHandler.LinkReadingToDirectDebit(dd.Id, readingId, userID);
+            
+            if (result.IsSuccess)
+            {
+                successCount++;
+            }
+            else
+            {
+                errorCount++;
+                ToastService?.ShowError($"Failed to link reading {readingId}: {result.ErrorMessage}");
+            }
+        }
+
+        if (successCount > 0)
+        {
+            ToastService?.ShowSuccess($"Successfully linked {successCount} reading(s).");
+            await LoadLinkedReadings(dd.Id);
+            await LoadAvailableReadings();
+            selectedReadings.Clear();
+        }
+
+        isLinking = false;
+        StateHasChanged();
+    }
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Paid" => "bg-success",
+        "Pending" => "bg-warning text-dark",
+        "Failed" => "bg-danger",
+        "Cancelled" => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}

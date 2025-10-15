@@ -1,0 +1,168 @@
+@page "/direct-debits"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using SimpleCRUD.Components.Reuseables.Lists
+@using SimpleCRUD.Components.Reuseables.Shared
+@using SimpleCRUD.Components.Reuseables.Status
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using SimpleCRUD.Components.Reuseables.Utility
+@using SimpleCRUD.Components.Utils
+@using SimpleCRUD.DTO.Utility.DirectDebits
+@using SimpleCRUD.DTO.Utility.DirectDebits.Requests
+@using SimpleCRUD.Services
+@using SimpleCRUD.Engine.DirectDebit
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavManager
+@inject ToastService ToastService
+
+@inject IdentityUserHandler<string> IdentityUserHandler
+@inject DirectDebitHandler<DirectDebit> DirectDebitHandler
+
+<Toast />
+
+<AccessLevelView>
+    <PageTitle>Direct Debits</PageTitle>
+
+    <div class="flex-sp-list-header">
+        <h1 class="px-1">Direct Debits</h1>
+        <AddNewButton Route="@("/direct-debits/create")" Label="direct debit" ExtraStyleClass="btn-sm" />
+    </div>
+
+    @if (resultGetAll is null)
+    {
+        <p>Loading...</p>
+    }
+    else if (!resultGetAll.IsSuccess)
+    {
+        <p class="text-danger">Error: @resultGetAll.ErrorMessage</p>
+    }
+    else if (directDebits.Count == 0)
+    {
+        <p>No direct debits.</p>
+    }
+    else
+    {
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0">Page size</label>
+                <select class="form-select form-select-sm" style="width:auto"
+                        @onchange="OnPageSizeChanged" value="@pageSize">
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+        </div>
+
+        <table class="table">
+            <thead>
+                <tr class="text-center">
+                    <th class="text-start">Payment Date</th>
+                    <th class="text-center">Provider</th>
+                    <th class="text-center">Amount</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Notes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var dd in PagedDirectDebits)
+                {
+                    <tr class="align-content-center text-center">
+                        <td class="text-start">@dd.PaymentDate.ToString("yyyy-MMM-dd")</td>
+                        <td class="text-center">@(dd.ProviderName ?? "N/A")</td>
+                        <td class="text-center">@dd.Amount.ToPounds(2)</td>
+                        <td class="text-center">
+                            <span class="badge @GetStatusBadgeClass(dd.PaymentStatus)">@dd.PaymentStatus</span>
+                        </td>
+                        <td class="text-center">@(string.IsNullOrEmpty(dd.Notes) ? "N/A" : dd.Notes)</td>
+                        <td class="text-center">
+                            <ViewButton Route="@($"/direct-debits/view/{dd.Id}")" ExtraStyleClass="btn-sm"></ViewButton>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="d-flex justify-content-center my-3">
+            <Pagination TotalItems="@directDebits.Count"
+                        PageSize="@pageSize"
+                        CurrentPage="@currentPage"
+                        CurrentPageChanged="@OnPageChanged"
+                        MaxVisiblePages="7" />
+        </div>
+    }
+</AccessLevelView>
+
+@code {
+    private Result<IEnumerable<DirectDebit>>? resultGetAll;
+
+    private List<DirectDebit> directDebits =>
+        (resultGetAll?.Data ?? Enumerable.Empty<DirectDebit>()).ToList();
+
+    private int currentPage = 1;
+    private int pageSize = 5;
+
+    private IEnumerable<DirectDebit> PagedDirectDebits =>
+        directDebits.Skip((currentPage - 1) * pageSize).Take(pageSize);
+
+    private string? userName;
+    private string? userID;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userName = authState.User.Identity?.Name;
+
+        var idResult = await IdentityUserHandler.GetUserIdByUsername(userName);
+        userID = idResult.Data;
+
+        await LoadAll();
+    }
+
+    private async Task LoadAll()
+    {
+        if (string.IsNullOrEmpty(userID))
+        {
+            resultGetAll = Result<IEnumerable<DirectDebit>>.Fail("User not found.");
+            return;
+        }
+
+        var request = new DirectDebitsListByDateRequest { UserId = userID };
+
+        resultGetAll = await DirectDebitHandler.GetAllDirectDebits(request);
+
+        if (resultGetAll.IsSuccess)
+        {
+            currentPage = 1;
+        }
+    }
+
+    private Task OnPageChanged(int newPage)
+    {
+        var totalPages = Math.Max(1, (int)Math.Ceiling(directDebits.Count / (double)pageSize));
+        currentPage = Math.Clamp(newPage, 1, totalPages);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e?.Value?.ToString(), out var newSize) && newSize > 0)
+        {
+            pageSize = newSize;
+            currentPage = 1;
+        }
+    }
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Paid" => "bg-success",
+        "Pending" => "bg-warning text-dark",
+        "Failed" => "bg-danger",
+        "Cancelled" => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}

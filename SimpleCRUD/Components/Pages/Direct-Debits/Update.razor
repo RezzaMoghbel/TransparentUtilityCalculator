@@ -1,0 +1,229 @@
+@page "/direct-debits/update/{Id:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Components    
+@using SimpleCRUD.Components.Utils
+@using SimpleCRUD.DTO.Utility.DirectDebits
+@using SimpleCRUD.Services
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@using SimpleCRUD.Components.Reuseables.Utility
+@using SimpleCRUD.Engine.DirectDebit
+@inject NavigationManager NavManager
+@inject ToastService ToastService
+@inject AuthenticationStateProvider AuthProvider
+
+<!-- inject handlers -->
+@inject IdentityUserHandler<string> IdentityUserHandler
+@inject DirectDebitHandler<DirectDebit> DirectDebitReadHandler
+@inject DirectDebitHandler<DirectDebitUpdate> DirectDebitUpdateHandler
+@inject DirectDebitHandler<UtilityProvider> ProvidersHandler
+
+<style>
+    /* mobile-friendly tweaks */
+    .readonly-box {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    @@media (max-width: 576px) {
+        .form-floating > label {
+            font-size: .9rem;
+        }
+
+        .section-title {
+            margin-top: .75rem;
+        }
+    }
+</style>
+
+<Toast />
+
+<AccessLevelView>
+    <PageTitle>Edit Direct Debit</PageTitle>
+
+    <h3 class="py-3">
+        Direct Debit Details (Update)
+        <span class="badge @GetStatusBadgeClass(ddUpdate.PaymentStatus ?? "") ms-2">@(ddUpdate.PaymentStatus ?? "")</span>
+    </h3>
+
+    @if (isLoading)
+    {
+        <p>Loading…</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <p class="text-danger">@loadError</p>
+    }
+    else
+    {
+        <EditForm Model="ddUpdate" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <!-- Top row -->
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputDate @bind-Value="ddUpdate.PaymentDate" class="form-control" id="paymentDate" />
+                    <ValidationMessage For="@(() => ddUpdate.PaymentDate)" />
+                    <label for="paymentDate">Payment Date</label>
+                </div>
+
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputNumber @bind-Value="ddUpdate.Amount" step="0.01" inputmode="decimal" min="0.01"
+                                 class="form-control" id="amount" />
+                    <ValidationMessage For="@(() => ddUpdate.Amount)" />
+                    <label for="amount">Amount (£)</label>
+                </div>
+
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputSelect @bind-Value="ddUpdate.UtilityProviderId" class="form-control" id="utilityProviderId">
+                        <option value="">Select a provider (Optional)</option>
+                        @if (providersResult?.Data != null)
+                        {
+                            @foreach (var provider in providersResult.Data)
+                            {
+                                <option value="@provider.Id">@provider.Name</option>
+                            }
+                        }
+                    </InputSelect>
+                    <label for="utilityProviderId">Utility Provider</label>
+                </div>
+            </div>
+
+            <!-- Second row -->
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputSelect @bind-Value="ddUpdate.PaymentStatus" class="form-control" id="paymentStatus">
+                        <option value="Pending">Pending</option>
+                        <option value="Paid">Paid</option>
+                        <option value="Failed">Failed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => ddUpdate.PaymentStatus)" />
+                    <label for="paymentStatus">Payment Status</label>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <h5 class="section-title mt-3">Notes</h5>
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12">
+                    <InputTextArea @bind-Value="ddUpdate.Notes" class="form-control" id="notes" rows="3" />
+                    <ValidationMessage For="@(() => ddUpdate.Notes)" />
+                    <label for="notes">Notes</label>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-start gap-2 mt-3 flex-wrap">
+                <button class="btn btn-primary" type="submit" style="min-width:160px">Save changes</button>
+                <button class="btn btn-secondary" type="button"
+                        formnovalidate
+                @onclick:preventDefault
+                        @onclick="GoBack">
+                    Cancel
+                </button>
+            </div>
+        </EditForm>
+    }
+</AccessLevelView>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private DirectDebitUpdate ddUpdate = new();
+    private Result<IEnumerable<UtilityProvider>>? providersResult;
+    private bool isLoading = true;
+    private string? loadError;
+    private string? userID;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current user id
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var userName = authState.User.Identity?.Name;
+
+        // Use injected handler
+        var who = await IdentityUserHandler.GetUserIdByUsername(userName);
+        if (!who.IsSuccess || string.IsNullOrEmpty(who.Data))
+        {
+            NavManager.NavigateTo("/direct-debits");
+            return;
+        }
+        userID = who.Data;
+
+        // Load providers
+        providersResult = await ProvidersHandler.GetAllActiveProviders();
+        if (!providersResult.IsSuccess)
+        {
+            loadError = providersResult.ErrorMessage;
+            isLoading = false;
+            return;
+        }
+
+        // Load the direct debit
+        var ddResult = await DirectDebitReadHandler.GetDirectDebitById(userID, Id);
+        if (!ddResult.IsSuccess)
+        {
+            loadError = ddResult.ErrorMessage ?? "Failed to load the requested item.";
+            isLoading = false;
+            return;
+        }
+        var dd = ddResult.Data?.FirstOrDefault();
+        if (dd is null || dd.Id < 1)
+        {
+            loadError = "The requested item was not found.";
+            isLoading = false;
+            NavManager.NavigateTo("/direct-debits");
+            return;
+        }
+
+        // Map to Update DTO
+        ddUpdate = new DirectDebitUpdate
+        {
+            Id = dd.Id,
+            UserId = dd.UserId,
+            Amount = dd.Amount,
+            PaymentDate = dd.PaymentDate,
+            UtilityProviderId = dd.UtilityProviderId,
+            PaymentStatus = dd.PaymentStatus,
+            Notes = dd.Notes
+        };
+
+        isLoading = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (string.IsNullOrEmpty(userID))
+        {
+            ToastService.ShowError("Not signed in.");
+            return;
+        }
+
+        // ✅ use injected handler
+        var result = await DirectDebitUpdateHandler.UpdateDirectDebit(ddUpdate);
+        if (result.IsSuccess)
+        {
+            ToastService.ShowSuccess("Direct debit updated.");
+            NavManager.NavigateTo("/direct-debits");
+        }
+        else
+        {
+            ToastService.ShowError($"Update failed. {result.ErrorMessage}");
+        }
+    }
+
+    private void GoBack() => NavManager.NavigateTo($"/direct-debits/view/{ddUpdate.Id}");
+
+    private string GetStatusBadgeClass(string status) => status switch
+    {
+        "Paid" => "bg-success",
+        "Pending" => "bg-warning text-dark",
+        "Failed" => "bg-danger",
+        "Cancelled" => "bg-secondary",
+        _ => "bg-secondary"
+    };
+}
