@@ -1,0 +1,257 @@
+@page "/reports/direct-debit-balance/{Id}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Components
+@using SimpleCRUD.Components.Utils
+@using SimpleCRUD.DTO.Utility.DirectDebits
+@using SimpleCRUD.DTO.Utility.Readings
+@using SimpleCRUD.Services
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using SimpleCRUD.Components.Reuseables.Utility
+@using SimpleCRUD.Engine.DirectDebit
+@inject NavigationManager NavManager
+@inject ToastService ToastService
+@inject AuthenticationStateProvider AuthProvider
+
+@inject IdentityUserHandler<string> IdentityUserHandler
+@inject DirectDebitHandler<SimpleCRUD.DTO.Utility.DirectDebits.DirectDebitBalanceDetail> BalanceDetailHandler
+@inject DirectDebitHandler<UtilityReading> LinkedReadingsHandler
+
+<style>
+    .readonly-box {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    @@media (max-width: 576px) {
+        .form-floating > label {
+            font-size: .9rem;
+        }
+
+        .section-title {
+            margin-top: .75rem;
+        }
+    }
+</style>
+
+<Toast />
+
+<AccessLevelView>
+    <PageTitle>@(balanceDetail?.ProviderName is null ? "Direct Debit Balance" : $"{balanceDetail.ProviderName} Direct Debit Balance")</PageTitle>
+
+    <h3 class="py-3">
+        Direct Debit Balance Details
+    </h3>
+
+    @if (isLoading)
+    {
+        <p>Loading...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <p class="text-danger">@loadError</p>
+    }
+    else
+    {
+        <!-- Balance Summary Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Balance Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h6 class="text-muted mb-1">Direct Debit Amount</h6>
+                            <h4 class="text-primary">@(balanceDetail?.DirectDebitAmount.ToPounds(2) ?? "£0.00")</h4>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h6 class="text-muted mb-1">Linked Readings Total</h6>
+                            <h4 class="text-info">@(balanceDetail?.LinkedReadingsTotal.ToPounds(2) ?? "£0.00")</h4>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h6 class="text-muted mb-1">Balance</h6>
+                            <h4 class="@GetBalanceTextClass(balanceDetail?.Balance ?? 0)">
+                                @(balanceDetail?.Balance.ToPounds(2) ?? "£0.00")
+                            </h4>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h6 class="text-muted mb-1">Status</h6>
+                            <span class="badge @GetBalanceStatusBadgeClass(balanceDetail?.BalanceStatus ?? "") fs-6">
+                                @(balanceDetail?.BalanceStatus ?? "Unknown")
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Details -->
+        <div class="row g-3">
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@(balanceDetail?.PaymentDate.ToString("yyyy MMM dd") ?? "")" class="form-control" id="paymentDate" disabled>
+                <label for="paymentDate">Payment Date</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@(balanceDetail?.ProviderName ?? "N/A")" class="form-control" id="providerName" disabled>
+                <label for="providerName">Provider</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@(balanceDetail?.PaymentStatus ?? "")" class="form-control" id="paymentStatus" disabled>
+                <label for="paymentStatus">Payment Status</label>
+            </div>
+            <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                <input type="text" value="@(balanceDetail?.CreatedAt.ToString("yyyy MMM dd") ?? "")" class="form-control" id="createdAt" disabled>
+                <label for="createdAt">Created</label>
+            </div>
+        </div>
+
+        <!-- Linked Readings Breakdown -->
+        <h5 class="section-title mt-3">Linked Readings Breakdown</h5>
+        @if (linkedReadings.Count == 0)
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                No readings are linked to this direct debit.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr class="text-center">
+                            <th class="text-start">Utility Type</th>
+                            <th class="text-center">Reading Period</th>
+                            <th class="text-center">Units Used</th>
+                            <th class="text-center">Total Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var reading in linkedReadings)
+                        {
+                            <tr class="text-center">
+                                <td class="text-start">@reading.UtilityType</td>
+                                <td class="text-center">@reading.ReadingStartDate.ToString("yyyy-MMM-dd") to @reading.ReadingEndDate.ToString("yyyy-MMM-dd")</td>
+                                <td class="text-center">@reading.UnitsUsed</td>
+                                <td class="text-center">@reading.Total.ToPounds(2)</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-info fw-bold">
+                            <td colspan="3" class="text-end">Total:</td>
+                            <td class="text-center">@linkedReadings.Sum(r => r.Total).ToPounds(2)</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+
+        <!-- Notes -->
+        <h5 class="section-title mt-3">Notes</h5>
+        <div class="row g-3">
+            <div class="mb-2 col-12">
+                <textarea class="form-control readonly-box" id="notes" rows="3" readonly>@(balanceDetail?.Notes ?? "No notes")</textarea>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center mt-3 flex-wrap">
+            <button class="btn btn-secondary" type="button"
+                    formnovalidate @onclick:preventDefault @onclick="GoBack">
+                Back
+            </button>
+        </div>
+    }
+</AccessLevelView>
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private SimpleCRUD.DTO.Utility.DirectDebits.DirectDebitBalanceDetail? balanceDetail;
+    private List<UtilityReading> linkedReadings = new();
+    private bool isLoading = true;
+    private string? loadError;
+    private string? userName;
+    private string? userID;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(Id) || !int.TryParse(Id, out var directDebitId) || directDebitId < 1)
+        {
+            NavManager.NavigateTo("/reports/direct-debit-balance");
+            return;
+        }
+
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        userName = authState.User.Identity?.Name;
+
+        var result = await IdentityUserHandler.GetUserIdByUsername(userName);
+        userID = result.Data;
+
+        if (string.IsNullOrEmpty(userID))
+        {
+            NavManager.NavigateTo("/reports/direct-debit-balance");
+            return;
+        }
+
+        // Load balance detail
+        var balanceResult = await BalanceDetailHandler.GetDirectDebitBalanceById(directDebitId, userID);
+        if (!balanceResult.IsSuccess)
+        {
+            loadError = balanceResult?.ErrorMessage ?? "Failed to load the requested item.";
+            isLoading = false;
+            return;
+        }
+
+        balanceDetail = balanceResult.Data?.FirstOrDefault();
+        if (balanceDetail == null)
+        {
+            loadError = "The requested item was not found.";
+            isLoading = false;
+            NavManager.NavigateTo("/reports/direct-debit-balance");
+            return;
+        }
+
+        // Load linked readings
+        await LoadLinkedReadings(directDebitId);
+
+        isLoading = false;
+    }
+
+    private async Task LoadLinkedReadings(int directDebitId)
+    {
+        var linkedResult = await LinkedReadingsHandler.GetReadingsForDirectDebit(directDebitId, userID!);
+        if (linkedResult.IsSuccess)
+        {
+            linkedReadings = linkedResult.Data?.ToList() ?? new List<UtilityReading>();
+        }
+    }
+
+    private void GoBack()
+    {
+        NavManager.NavigateTo("/reports/direct-debit-balance");
+    }
+
+    private string GetBalanceStatusBadgeClass(string status) => status switch
+    {
+        "Exact" => "bg-success",
+        "Overpaid" => "bg-warning text-dark",
+        "Underpaid" => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private string GetBalanceTextClass(decimal balance) => balance switch
+    {
+        > 0 => "text-warning",    // Overpaid
+        0 => "text-success",      // Exact
+        _ => "text-danger"        // Underpaid (negative)
+    };
+}
