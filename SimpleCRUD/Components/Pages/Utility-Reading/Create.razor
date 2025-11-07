@@ -7,6 +7,8 @@
 @using SimpleCRUD.DTO.Identity
 @using SimpleCRUD.Services
 @using SimpleCRUD.Components.Reuseables.Toasts
+@using SimpleCRUD.Components.Reuseables.Dialogs
+@using SimpleCRUD.Components.Reuseables.Utility
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using System.Globalization
@@ -22,12 +24,32 @@
 
 @rendermode InteractiveServer
 
+<style>
+    /* mobile-friendly tweaks */
+    .readonly-box {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    @@media (max-width: 576px) {
+        .form-floating > label {
+            font-size: .9rem;
+        }
+
+        .section-title {
+            margin-top: .75rem;
+        }
+    }
+</style>
+
 <Toast />
 
 <AccessLevelView>
     <PageTitle>Create new</PageTitle>
 
-    <h3>Create a new reading</h3>
+    <h3 class="py-3">
+        <UtilityTypeActiveBadge UtilityType="@currentUtilityTypeName" ExtraText="reading (create)" />
+    </h3>
 
     @if (isLoading)
     {
@@ -39,12 +61,13 @@
     }
     else
     {
-        <EditForm Model="urCreate" OnValidSubmit="HandleValidSubmit" FormName="createUserForm">
+        <EditForm Model="urCreate" @ref="editForm" FormName="createUserForm">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" />
 
-            <div class="row g-4">
-                <div class="form-floating mb-4 col">
+            <!-- Utility Type Selection -->
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
                     <InputSelect @bind-Value="urCreate.UtilityTypeId" class="form-control" id="utilityTypeId">
                         <option value="0" selected disabled>Select a type</option>
                         @if (utilityTypesResult?.Data != null)
@@ -56,22 +79,66 @@
                         }
                     </InputSelect>
                     <ValidationMessage For="@(() => urCreate.UtilityTypeId)" />
-                    <label for="accessLevel">Utility type</label>
+                    <label for="utilityTypeId">Utility type</label>
+                </div>
+            </div>
+
+            <!-- Period -->
+            <h5 class="section-title mt-3">Period</h5>
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputDate @bind-Value="urCreate.ReadingStartDate" class="form-control" id="readingStartDate" />
+                    <ValidationMessage For="@(() => urCreate.ReadingStartDate)" />
+                    <label for="readingStartDate">Start date</label>
                 </div>
 
-                <div class="form-floating mb-4 col">
-                    <InputNumber @bind-Value="urCreate.UnitRate" class="form-control" id="unitRate" />
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputDate @bind-Value="urCreate.ReadingEndDate" class="form-control" id="readingEndDate" />
+                    <ValidationMessage For="@(() => urCreate.ReadingEndDate)" />
+                    <label for="readingEndDate">End date</label>
+                </div>
+            </div>
+
+            <!-- Usage -->
+            <h5 class="section-title mt-3">Usage</h5>
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputNumber @bind-Value="urCreate.MeterStart" step="any" inputmode="decimal" min="0"
+                                 class="form-control" id="meterStart" />
+                    <ValidationMessage For="@(() => urCreate.MeterStart)" />
+                    <label for="meterStart">Meter start</label>
+                </div>
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputNumber @bind-Value="urCreate.MeterEnd" step="any" inputmode="decimal" min="0"
+                                 class="form-control" id="meterEnd" />
+                    <ValidationMessage For="@(() => urCreate.MeterEnd)" />
+                    <label for="meterEnd">Meter end</label>
+                </div>
+                <div class="form-floating mb-2 col-12 col-lg-4">
+                    <input type="text" class="form-control" id="unitsUsed"
+                           value="@($"{UnitsPreview:0.###} {CurrentUnitLabel}")" disabled>
+                    <label for="unitsUsed">Units used</label>
+                </div>
+            </div>
+
+            <!-- Rates -->
+            <h5 class="section-title mt-3">Rates</h5>
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputNumber @bind-Value="urCreate.UnitRate" step="any" inputmode="decimal" min="0"
+                                 class="form-control" id="unitRate" />
                     <ValidationMessage For="@(() => urCreate.UnitRate)" />
-                    <label for="unitRate">Unit rate (£)</label>
+                    <label for="unitRate">Unit rate (per @CurrentUnitLabel)</label>
                 </div>
 
-                <div class="form-floating mb-4 col">
-                    <InputNumber @bind-Value="urCreate.StandingChargePerDay" class="form-control" id="standingChargePerDay" />
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
+                    <InputNumber @bind-Value="urCreate.StandingChargePerDay" step="any" inputmode="decimal" min="0"
+                                 class="form-control" id="standingPerDay" />
                     <ValidationMessage For="@(() => urCreate.StandingChargePerDay)" />
-                    <label for="standingChargePerDay">Flat rate per day (£)</label>
+                    <label for="standingPerDay">Standing charge / day</label>
                 </div>
 
-                <div class="form-floating mb-4 col">
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
                     <InputSelect @bind-Value="urCreate.VatRateFactor" class="form-control" id="vatRateFactor">
                         <option value="0" selected disabled>Select VAT rate</option>
                         <option value="1">0%</option>
@@ -81,65 +148,140 @@
                         <option value="1.2">20%</option>
                     </InputSelect>
                     <ValidationMessage For="@(() => urCreate.VatRateFactor)" />
-                    <label for="vatRateFactor">VAT rate (%)</label>
+                    <label for="vatRateFactor">VAT rate</label>
                 </div>
             </div>
 
-            <div class="row g-4">
-                <div class="form-floating mb-4 col">
-                    <InputDate @bind-Value="urCreate.ReadingStartDate" class="form-control" id="readingStartDate" />
-                    <ValidationMessage For="@(() => urCreate.ReadingStartDate)" />
-                    <label for="readingStartDate">Reading start date (DD-MM-YYYY)</label>
-                </div>
-
-                <div class="form-floating mb-4 col">
-                    <InputNumber @bind-Value="urCreate.MeterStart" class="form-control" id="meterStart" />
-                    <ValidationMessage For="@(() => urCreate.MeterStart)" />
-                    <label for="meterStart">Meter reading at start date</label>
-                </div>
-
-                <div class="form-floating mb-4 col">
-                    <InputDate @bind-Value="urCreate.ReadingEndDate" class="form-control" id="readingEndDate" />
-                    <ValidationMessage For="@(() => urCreate.ReadingEndDate)" />
-                    <label for="readingEndDate">Reading end date (DD-MM-YYYY)</label>
-                </div>
-
-                <div class="form-floating mb-4 col">
-                    <InputNumber @bind-Value="urCreate.MeterEnd" class="form-control" id="meterEnd" />
-                    <ValidationMessage For="@(() => urCreate.MeterEnd)" />
-                    <label for="meterEnd">Meter reading at end date</label>
-                </div>
-            </div>
-
-            <div class="row g-2">
-                <div class="form-floating mb-2 col">
-                    <InputTextArea @bind-Value="urCreate.Notes" class="form-control" id="notes" />
+            <!-- Notes -->
+            <h5 class="section-title mt-3">Notes</h5>
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12">
+                    <InputTextArea @bind-Value="urCreate.Notes" class="form-control" id="notes" rows="3" />
                     <ValidationMessage For="@(() => urCreate.Notes)" />
                     <label for="notes">Reading notes</label>
                 </div>
             </div>
 
-            <div class="d-flex justify-content-start gap-2 mt-3" style="flex-direction: row-reverse;">
-                <button class="btn btn-primary" type="submit" style="width: 200px">Save</button>
-                <span style="padding-left:20px"></span>
+            <!-- Live preview -->
+            <h5 class="section-title mt-3">Preview</h5>
+            <div class="row g-3">
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                    <input type="text" class="form-control" id="previewDays" value="@DaysPreview" disabled>
+                    <label for="previewDays">Days billed</label>
+                </div>
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                    <input type="text" class="form-control" id="previewUsageCost" value="@UsageCostPreview.ToPounds(2)" disabled>
+                    <label for="previewUsageCost">Usage cost</label>
+                </div>
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                    <input type="text" class="form-control" id="previewStanding" value="@StandingTotalPreview.ToPounds(2)" disabled>
+                    <label for="previewStanding">Standing total</label>
+                </div>
+                <div class="form-floating mb-2 col-12 col-sm-6 col-lg-3">
+                    <input type="text" class="form-control" id="previewTotal" value="@TotalPreview.ToPounds(2)" disabled>
+                    <label for="previewTotal">Estimated total</label>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-start gap-2 mt-3 flex-wrap">
+                <button class="btn btn-primary" type="button" style="min-width:160px" @onclick="HandleSaveClick">Save</button>
                 <button class="btn btn-secondary" type="button"
-                        formnovalidate
-                @onclick:preventDefault
                         @onclick="GoBack">
                     Cancel
                 </button>
             </div>
         </EditForm>
+
+        <!-- Confirmation Modal -->
+        <ConfirmationModal IsVisible="@showConfirmationModal"
+                          Title="Confirm Create Utility Reading"
+                          ConfirmButtonText="Create"
+                          ConfirmButtonClass="btn-primary"
+                          OnConfirm="HandleValidSubmit"
+                          OnCancel="CancelConfirmation">
+            <div>
+                <p class="mb-3">Please review the details before creating this utility reading:</p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <tbody>
+                            <tr>
+                                <th class="bg-light" style="width: 40%;">Utility Type</th>
+                                <td>@currentUtilityTypeName</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Period</th>
+                                <td>@urCreate.ReadingStartDate?.ToString("yyyy-MMM-dd") to @urCreate.ReadingEndDate?.ToString("yyyy-MMM-dd")</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Meter Readings</th>
+                                <td>@urCreate.MeterStart to @urCreate.MeterEnd (@UnitsPreview.ToString("0.###") @CurrentUnitLabel)</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Unit Rate</th>
+                                <td>@urCreate.UnitRate?.ToPounds(3) per @CurrentUnitLabel</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Standing Charge</th>
+                                <td>@urCreate.StandingChargePerDay?.ToPounds(3) per day</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">VAT Rate</th>
+                                <td>@(urCreate.VatRateFactor.HasValue ? PercentUtils.FactorToPercentString(urCreate.VatRateFactor.Value, 1) : "N/A")</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Estimated Total</th>
+                                <td class="fw-bold">@TotalPreview.ToPounds(2)</td>
+                            </tr>
+                            @if (!string.IsNullOrWhiteSpace(urCreate.Notes))
+                            {
+                                <tr>
+                                    <th class="bg-light">Notes</th>
+                                    <td>@urCreate.Notes</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </ConfirmationModal>
     }
 </AccessLevelView>
 
 @code {
     private UtilityReadingCreate urCreate = new();
     private Result<IEnumerable<UtilityType>>? utilityTypesResult;
+    private List<UtilityType> UtilityTypes = new();
     private bool isLoading = true;
     private string? loadError;
     private string? userName;
     private string? userID;
+    private bool showConfirmationModal = false;
+    private EditForm? editForm;
+
+    private readonly Dictionary<string, string> UnitsByName =
+        new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Electricity"] = "kWh",
+                ["Gas"] = "m3",
+                ["Water-Hot"] = "m3",
+                ["Water-Cold"] = "m3"
+            };
+
+    private string CurrentUnitLabel =>
+        (currentUtilityTypeName is not null && UnitsByName.TryGetValue(currentUtilityTypeName, out var u))
+            ? u : "unit";
+
+    private string? currentUtilityTypeName =>
+        UtilityTypes.FirstOrDefault(t => t.Id == urCreate.UtilityTypeId)?.Name;
+
+    // PREVIEW CALCS
+    private decimal UnitsPreview => Math.Max(0m, (urCreate.MeterEnd ?? 0m) - (urCreate.MeterStart ?? 0m));
+    private int DaysPreview => Math.Max(0, (int)(((urCreate.ReadingEndDate?.Date ?? DateTime.MinValue)
+                       - (urCreate.ReadingStartDate?.Date ?? DateTime.MinValue)).TotalDays));
+    private decimal? UsageCostPreview => UnitsPreview * (urCreate.UnitRate ?? 0m);
+    private decimal? StandingTotalPreview => DaysPreview * (urCreate.StandingChargePerDay ?? 0m);
+    private decimal? SubtotalPreview => UsageCostPreview + StandingTotalPreview;
+    private decimal? TotalPreview => SubtotalPreview * (urCreate.VatRateFactor == 0 || !urCreate.VatRateFactor.HasValue ? 1 : urCreate.VatRateFactor.Value);
 
     protected override async Task OnInitializedAsync()
     {
@@ -163,11 +305,34 @@
             return;
         }
 
+        UtilityTypes = utilityTypesResult.Data?.ToList() ?? [];
+
         isLoading = false;
+    }
+
+    private async Task HandleSaveClick()
+    {
+        // Validate the form
+        if (editForm?.EditContext != null && editForm.EditContext.Validate())
+        {
+            // Form is valid, show confirmation modal
+            showConfirmationModal = true;
+            await InvokeAsync(StateHasChanged);
+        }
+        // If validation fails, the ValidationSummary will show errors
+    }
+
+    private async Task CancelConfirmation()
+    {
+        showConfirmationModal = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleValidSubmit()
     {
+        showConfirmationModal = false;
+        await InvokeAsync(StateHasChanged);
+
         if (string.IsNullOrEmpty(userID))
         {
             ToastService.ShowError($"Failed to create a new reading, try again later!");
@@ -177,6 +342,23 @@
         if (urCreate.UtilityTypeId < 1)
         {
             ToastService.ShowError("Please select a 'Utility type'!");
+            return;
+        }
+
+        // Client-side validation
+        if (urCreate.ReadingEndDate < urCreate.ReadingStartDate)
+        {
+            ToastService.ShowError("End date must be on or after Start date.");
+            return;
+        }
+        if (urCreate.MeterEnd < urCreate.MeterStart)
+        {
+            ToastService.ShowError("Meter end must be >= Meter start.");
+            return;
+        }
+        if (urCreate.UtilityTypeId == 4 && urCreate.StandingChargePerDay != 0)
+        {
+            ToastService.ShowError("Hot Water must have Standing charge/day = 0.");
             return;
         }
 
