@@ -82,13 +82,13 @@
             <h5 class="section-title mt-3">Usage</h5>
             <div class="row g-3">
                 <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
-                    <InputNumber @bind-Value="urUpdate.MeterStart" step="0.001" inputmode="decimal" min="0"
+                    <InputNumber @bind-Value="urUpdate.MeterStart" step="any" inputmode="decimal" min="0"
                                  class="form-control" id="meterStart" />
                     <ValidationMessage For="@(() => urUpdate.MeterStart)" />
                     <label for="meterStart">Meter start</label>
                 </div>
                 <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
-                    <InputNumber @bind-Value="urUpdate.MeterEnd" step="0.001" inputmode="decimal" min="0"
+                    <InputNumber @bind-Value="urUpdate.MeterEnd" step="any" inputmode="decimal" min="0"
                                  class="form-control" id="meterEnd" />
                     <ValidationMessage For="@(() => urUpdate.MeterEnd)" />
                     <label for="meterEnd">Meter end</label>
@@ -104,14 +104,14 @@
             <h5 class="section-title mt-3">Rates</h5>
             <div class="row g-3">
                 <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
-                    <InputNumber @bind-Value="urUpdate.UnitRate" step="0.001" inputmode="decimal" min="0"
+                    <InputNumber @bind-Value="urUpdate.UnitRate" step="any" inputmode="decimal" min="0"
                                  class="form-control" id="unitRate" />
                     <ValidationMessage For="@(() => urUpdate.UnitRate)" />
                     <label for="unitRate">Unit rate (per @CurrentUnitLabel)</label>
                 </div>
 
                 <div class="form-floating mb-2 col-12 col-sm-6 col-lg-4">
-                    <InputNumber @bind-Value="urUpdate.StandingChargePerDay" step="0.001" inputmode="decimal" min="0"
+                    <InputNumber @bind-Value="urUpdate.StandingChargePerDay" step="any" inputmode="decimal" min="0"
                                  class="form-control" id="standingPerDay" />
                     <ValidationMessage For="@(() => urUpdate.StandingChargePerDay)" />
                     <label for="standingPerDay">Standing charge / day</label>
