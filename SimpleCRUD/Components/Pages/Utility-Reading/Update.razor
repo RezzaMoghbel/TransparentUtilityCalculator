@@ -8,6 +8,7 @@
 @using SimpleCRUD.DTO.Utility.Types
 @using SimpleCRUD.Services
 @using SimpleCRUD.Components.Reuseables.Toasts
+@using SimpleCRUD.Components.Reuseables.Dialogs
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using SimpleCRUD.Components.Reuseables.Utility
@@ -59,7 +60,7 @@
     }
     else
     {
-        <EditForm Model="urUpdate" OnValidSubmit="HandleValidSubmit">
+        <EditForm Model="urUpdate" @ref="editForm">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" />
 
@@ -159,15 +160,93 @@
             </div>
 
             <div class="d-flex justify-content-start gap-2 mt-3 flex-wrap">
-                <button class="btn btn-primary" type="submit" style="min-width:160px">Save changes</button>
+                <button class="btn btn-primary" type="button" style="min-width:160px" @onclick="HandleSaveClick">Save changes</button>
                 <button class="btn btn-secondary" type="button"
-                        formnovalidate
-                @onclick:preventDefault
-                        @onclick="GoBack">
+                        @onclick="HandleCancelClick">
                     Cancel
                 </button>
             </div>
         </EditForm>
+
+        <!-- Confirmation Modal -->
+        <ConfirmationModal IsVisible="@showConfirmationModal"
+                          Title="Confirm Update Utility Reading"
+                          ConfirmButtonText="Update"
+                          ConfirmButtonClass="btn-primary"
+                          OnConfirm="HandleValidSubmit"
+                          OnCancel="CancelConfirmation">
+            <div>
+                <p class="mb-3">Please review the changes before saving:</p>
+                @if (HasChanges)
+                {
+                    <div class="alert alert-info mb-3">
+                        <strong>Changes detected:</strong> The following fields have been modified:
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%;">Field</th>
+                                    <th style="width: 35%;">Old Value</th>
+                                    <th style="width: 35%;">New Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var change in GetChanges())
+                                {
+                                    <tr>
+                                        <th class="bg-light">@change.Field</th>
+                                        <td class="text-muted">@change.OldValue</td>
+                                        <td class="text-primary fw-bold">@change.NewValue</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning">
+                        No changes detected. The form values match the original values.
+                    </div>
+                }
+            </div>
+        </ConfirmationModal>
+
+        <!-- Unsaved Changes Warning Modal -->
+        <ConfirmationModal IsVisible="@showUnsavedChangesModal"
+                          Title="Unsaved Changes"
+                          ConfirmButtonText="Discard Changes"
+                          ConfirmButtonClass="btn-danger"
+                          HeaderClass="text-warning"
+                          OnConfirm="ConfirmDiscardChanges"
+                          OnCancel="CancelDiscardChanges">
+            <div>
+                <p class="mb-3"><strong>You have unsaved changes!</strong> If you cancel now, you will lose the following changes:</p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="width: 30%;">Field</th>
+                                <th style="width: 35%;">Old Value</th>
+                                <th style="width: 35%;">New Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var change in GetChanges())
+                            {
+                                <tr>
+                                    <th class="bg-light">@change.Field</th>
+                                    <td class="text-muted">@change.OldValue</td>
+                                    <td class="text-danger fw-bold">@change.NewValue</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mt-3 text-danger"><strong>Are you sure you want to discard these changes?</strong></p>
+            </div>
+        </ConfirmationModal>
     }
 </AccessLevelView>
 
@@ -175,10 +254,14 @@
     [Parameter] public int Id { get; set; }
 
     private UtilityReadingUpdate urUpdate = new();
+    private UtilityReadingUpdate originalValues = new();
     private List<UtilityType> UtilityTypes = new();
     private bool isLoading = true;
     private string? loadError;
     private string? userID;
+    private bool showConfirmationModal = false;
+    private bool showUnsavedChangesModal = false;
+    private EditForm? editForm;
 
     private readonly (decimal Factor, string Label)[] VatOptions =
         [
@@ -274,11 +357,147 @@
                 Notes = r.Notes
             };
 
+        // Store original values for comparison
+        originalValues = new UtilityReadingUpdate
+            {
+                Id = r.Id,
+                UtilityTypeId = r.UtilityTypeId,
+                UserId = r.UserId,
+                UnitRate = r.UnitRate,
+                StandingChargePerDay = r.StandingChargePerDay,
+                VatRateFactor = r.VatRateFactor,
+                ReadingStartDate = r.ReadingStartDate,
+                ReadingEndDate = r.ReadingEndDate,
+                MeterStart = r.MeterStart,
+                MeterEnd = r.MeterEnd,
+                ProviderDebitAmount = r.ProviderDebitAmount,
+                ProviderDebitDate = r.ProviderDebitDate,
+                Notes = r.Notes
+            };
+
         isLoading = false;
+    }
+
+    private async Task HandleSaveClick()
+    {
+        // Validate the form
+        if (editForm?.EditContext != null && editForm.EditContext.Validate())
+        {
+            // Form is valid, show confirmation modal
+            showConfirmationModal = true;
+            await InvokeAsync(StateHasChanged);
+        }
+        // If validation fails, the ValidationSummary will show errors
+    }
+
+    private async Task CancelConfirmation()
+    {
+        showConfirmationModal = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleCancelClick()
+    {
+        if (HasChanges)
+        {
+            showUnsavedChangesModal = true;
+            await InvokeAsync(StateHasChanged);
+        }
+        else
+        {
+            GoBack();
+        }
+    }
+
+    private void ConfirmDiscardChanges()
+    {
+        showUnsavedChangesModal = false;
+        GoBack();
+    }
+
+    private async Task CancelDiscardChanges()
+    {
+        showUnsavedChangesModal = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private bool HasChanges
+    {
+        get
+        {
+            return originalValues.UtilityTypeId != urUpdate.UtilityTypeId ||
+                   originalValues.UnitRate != urUpdate.UnitRate ||
+                   originalValues.StandingChargePerDay != urUpdate.StandingChargePerDay ||
+                   originalValues.VatRateFactor != urUpdate.VatRateFactor ||
+                   originalValues.ReadingStartDate != urUpdate.ReadingStartDate ||
+                   originalValues.ReadingEndDate != urUpdate.ReadingEndDate ||
+                   originalValues.MeterStart != urUpdate.MeterStart ||
+                   originalValues.MeterEnd != urUpdate.MeterEnd ||
+                   (originalValues.Notes ?? "") != (urUpdate.Notes ?? "");
+        }
+    }
+
+    private List<(string Field, string OldValue, string NewValue)> GetChanges()
+    {
+        var changes = new List<(string, string, string)>();
+        var originalTypeName = UtilityTypes.FirstOrDefault(t => t.Id == originalValues.UtilityTypeId)?.Name ?? "Unknown";
+        var currentTypeName = currentUtilityTypeName ?? "Unknown";
+
+        if (originalValues.UtilityTypeId != urUpdate.UtilityTypeId)
+        {
+            changes.Add(("Utility Type", originalTypeName, currentTypeName));
+        }
+        if (originalValues.ReadingStartDate != urUpdate.ReadingStartDate)
+        {
+            var origStart = originalValues.ReadingStartDate.HasValue ? originalValues.ReadingStartDate.Value.ToString("yyyy-MMM-dd") : "";
+            var newStart = urUpdate.ReadingStartDate.HasValue ? urUpdate.ReadingStartDate.Value.ToString("yyyy-MMM-dd") : "";
+            changes.Add(("Start Date", origStart, newStart));
+        }
+        if (originalValues.ReadingEndDate != urUpdate.ReadingEndDate)
+        {
+            var origEnd = originalValues.ReadingEndDate.HasValue ? originalValues.ReadingEndDate.Value.ToString("yyyy-MMM-dd") : "";
+            var newEnd = urUpdate.ReadingEndDate.HasValue ? urUpdate.ReadingEndDate.Value.ToString("yyyy-MMM-dd") : "";
+            changes.Add(("End Date", origEnd, newEnd));
+        }
+        if (originalValues.MeterStart != urUpdate.MeterStart)
+        {
+            var origMeterStart = originalValues.MeterStart.HasValue ? originalValues.MeterStart.Value.ToString("0.###") : "";
+            var newMeterStart = urUpdate.MeterStart.HasValue ? urUpdate.MeterStart.Value.ToString("0.###") : "";
+            changes.Add(("Meter Start", origMeterStart, newMeterStart));
+        }
+        if (originalValues.MeterEnd != urUpdate.MeterEnd)
+        {
+            var origMeterEnd = originalValues.MeterEnd.HasValue ? originalValues.MeterEnd.Value.ToString("0.###") : "";
+            var newMeterEnd = urUpdate.MeterEnd.HasValue ? urUpdate.MeterEnd.Value.ToString("0.###") : "";
+            changes.Add(("Meter End", origMeterEnd, newMeterEnd));
+        }
+        if (originalValues.UnitRate != urUpdate.UnitRate)
+        {
+            changes.Add(("Unit Rate", originalValues.UnitRate?.ToPounds(3) ?? "", urUpdate.UnitRate?.ToPounds(3) ?? ""));
+        }
+        if (originalValues.StandingChargePerDay != urUpdate.StandingChargePerDay)
+        {
+            changes.Add(("Standing Charge/Day", originalValues.StandingChargePerDay?.ToPounds(3) ?? "", urUpdate.StandingChargePerDay?.ToPounds(3) ?? ""));
+        }
+        if (originalValues.VatRateFactor != urUpdate.VatRateFactor)
+        {
+            var origVat = originalValues.VatRateFactor.HasValue ? PercentUtils.FactorToPercentString(originalValues.VatRateFactor.Value, 1) : "N/A";
+            var newVat = urUpdate.VatRateFactor.HasValue ? PercentUtils.FactorToPercentString(urUpdate.VatRateFactor.Value, 1) : "N/A";
+            changes.Add(("VAT Rate", origVat, newVat));
+        }
+        if ((originalValues.Notes ?? "") != (urUpdate.Notes ?? ""))
+        {
+            changes.Add(("Notes", originalValues.Notes ?? "(empty)", urUpdate.Notes ?? "(empty)"));
+        }
+
+        return changes;
     }
 
     private async Task HandleValidSubmit()
     {
+        showConfirmationModal = false;
+        await InvokeAsync(StateHasChanged);
+
         if (string.IsNullOrEmpty(userID))
         {
             ToastService.ShowError("Not signed in.");
