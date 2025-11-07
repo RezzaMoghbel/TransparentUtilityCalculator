@@ -35,6 +35,7 @@
                     <label for="Input.Password" class="form-label">Password</label>
                     <ValidationMessage For="() => Input.Password" class="text-danger" />
                 </div>
+                <h6 class="pd-2">This service provides utility calculation tools for informational purposes only. All calculations are estimates and should be verified with your utility provider.</h6>
                 <div class="checkbox mb-3">
                     <label class="form-label">
                         <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
@@ -106,7 +107,8 @@ opacity: 0.5;">
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
-            RedirectManager.RedirectTo(ReturnUrl);
+            var redirectUrl = string.IsNullOrEmpty(ReturnUrl) || ReturnUrl == "/" ? "/dashboard" : ReturnUrl;
+            RedirectManager.RedirectTo(redirectUrl);
         }
         else if (result.RequiresTwoFactor)
         {

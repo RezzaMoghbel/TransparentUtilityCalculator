@@ -71,7 +71,7 @@
                 <label for="providerId">Provider</label>
                 <ValidationMessage For="() => Input.ProviderId" />
             </div>
-
+            <h6 class="pd-2">This service provides utility calculation tools for informational purposes only. All calculations are estimates and should be verified with your utility provider.</h6>
             <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
         </EditForm>
     </div>
@@ -179,7 +179,12 @@ opacity: 0.5;">
 
         Logger.LogInformation("User registered.");
 
-        RedirectManager.RedirectTo("Account/Login");
+        // Sign in the user after successful registration
+        await SignInManager.SignInAsync(user, isPersistent: false);
+        
+        // Use the same ReturnUrl logic as Login.razor - default to /dashboard if ReturnUrl is null, empty, or "/"
+        var redirectUrl = string.IsNullOrEmpty(ReturnUrl) || ReturnUrl == "/" ? "/dashboard" : ReturnUrl;
+        RedirectManager.RedirectTo(redirectUrl);
     }
 
 

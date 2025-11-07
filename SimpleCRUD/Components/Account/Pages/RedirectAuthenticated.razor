@@ -32,7 +32,7 @@ else if (!_isAuthenticated)
             if (_isAuthenticated && !_hasRedirected)
             {
                 _hasRedirected = true;
-                Navigation.NavigateTo("/", forceLoad: true);
+                Navigation.NavigateTo("/dashboard", forceLoad: true);
             }
         }
     }
