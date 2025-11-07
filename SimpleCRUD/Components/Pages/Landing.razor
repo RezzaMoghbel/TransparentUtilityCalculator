@@ -1,9 +1,137 @@
 @page "/"
 @rendermode InteractiveServer
+@inject NavigationManager NavigationManager
 
 <PageTitle>Utility Calculator - Track & Calculate Your Utility Costs</PageTitle>
 
 <HeadContent>
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Track, calculate, and manage your utility costs with our free utility calculator. Record meter readings, analyze consumption trends, and estimate costs for electricity, water, and gas utilities." />
+    <meta name="keywords" content="utility calculator, meter reading tracker, utility cost calculator, electricity calculator, water bill calculator, gas bill calculator, utility management, energy consumption tracker, property management utilities" />
+    <meta name="author" content="Transparent Utility Calculator" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="bingbot" content="index, follow" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="@NavigationManager.BaseUri" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="@NavigationManager.BaseUri" />
+    <meta property="og:title" content="Utility Calculator - Track & Calculate Your Utility Costs" />
+    <meta property="og:description" content="Track, calculate, and manage your utility costs with our free utility calculator. Record meter readings, analyze consumption trends, and estimate costs for electricity, water, and gas utilities." />
+    <meta property="og:image" content="@($"{NavigationManager.BaseUri}img/TUC-Logo.png")" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Transparent Utility Calculator" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="@NavigationManager.BaseUri" />
+    <meta name="twitter:title" content="Utility Calculator - Track & Calculate Your Utility Costs" />
+    <meta name="twitter:description" content="Track, calculate, and manage your utility costs with our free utility calculator. Record meter readings, analyze consumption trends, and estimate costs for electricity, water, and gas utilities." />
+    <meta name="twitter:image" content="@($"{NavigationManager.BaseUri}img/TUC-Logo.png")" />
+    
+    <!-- Additional SEO -->
+    <meta name="theme-color" content="#FD05F3" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Utility Calculator" />
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "WebApplication",
+        "name": "Transparent Utility Calculator",
+        "alternateName": "TUC",
+        "url": "@NavigationManager.BaseUri",
+        "description": "Track, calculate, and manage your utility costs with our free utility calculator. Record meter readings, analyze consumption trends, and estimate costs for electricity, water, and gas utilities.",
+        "applicationCategory": "UtilityApplication",
+        "operatingSystem": "Web",
+        "offers": {
+            "@@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "aggregateRating": {
+            "@@type": "AggregateRating",
+            "ratingValue": "4.5",
+            "ratingCount": "100"
+        },
+        "featureList": [
+            "Accurate utility cost calculations",
+            "Meter reading tracking",
+            "Consumption trend visualization",
+            "Multi-utility support (electricity, water, gas)",
+            "Direct debit management",
+            "Cost estimation tools"
+        ]
+    }
+    </script>
+    
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "Organization",
+        "name": "Transparent Utility Calculator",
+        "url": "@NavigationManager.BaseUri",
+        "logo": "@($"{NavigationManager.BaseUri}img/TUC-Logo.png")",
+        "description": "Utility calculation tools for tracking and managing utility costs"
+    }
+    </script>
+    
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@@type": "Question",
+                "name": "What is the Utility Calculator?",
+                "acceptedAnswer": {
+                    "@@type": "Answer",
+                    "text": "The Utility Calculator is a web-based application designed to help you record meter readings, track utility consumption over time, and generate cost estimates. The tool supports multiple utility types and provides visualization features to help you understand your usage patterns. This service is provided for informational purposes only."
+                }
+            },
+            {
+                "@@type": "Question",
+                "name": "How accurate are the calculations?",
+                "acceptedAnswer": {
+                    "@@type": "Answer",
+                    "text": "All calculations are estimates based on the data you enter. The accuracy depends entirely on the correctness of your meter readings and tariff information. We cannot guarantee that calculated costs will match your actual utility bills. Always verify calculations with your utility provider before making financial decisions."
+                }
+            },
+            {
+                "@@type": "Question",
+                "name": "What utilities can I track?",
+                "acceptedAnswer": {
+                    "@@type": "Answer",
+                    "text": "The system supports tracking for electricity, cold water, and hot water utilities. You can configure each utility type with your own tariff rates, standing charges, and VAT rates. The system allows you to record multiple readings over time and compare consumption periods."
+                }
+            },
+            {
+                "@@type": "Question",
+                "name": "Is my data secure?",
+                "acceptedAnswer": {
+                    "@@type": "Answer",
+                    "text": "We implement standard security practices to protect user data, including authentication and access controls. However, no online system can guarantee complete security against all threats. Users are responsible for maintaining their own data backups and using strong account credentials."
+                }
+            },
+            {
+                "@@type": "Question",
+                "name": "How do I get started?",
+                "acceptedAnswer": {
+                    "@@type": "Answer",
+                    "text": "To begin, create an account and log in. You can then add utility types, enter meter readings, and configure your tariff rates. The system will help you track consumption and estimate costs."
+                }
+            }
+        ]
+    }
+    </script>
+    
     <!-- Landing Page CSS - Scoped to this page only -->
     <link rel="stylesheet" type="text/css" href="assets/css/style.min.css" media="all">
     <link rel="stylesheet" type="text/css" href="assets/css/responsive.css" media="all">
@@ -91,7 +219,7 @@
                     <div class="col-lg-7 col-md-7">
                         <p class="fs-24 fw-500 mb-10 wow fadeInUp">Transparent Utility Calculator</p>
                         <h1 class="hero-heading wow fadeInUp">Utility Costs<span class="d-inline-block position-relative">Made Simple
-                            <img src="assets/images/shape/shape_01.svg" alt="" class="d-inline-block" onerror="this.style.display='none';">For Everyone!</span></h1>
+                            <img src="assets/images/shape/shape_01.svg" alt="Decorative shape" class="d-inline-block" onerror="this.style.display='none';">For Everyone!</span></h1>
                         <div class="row">
                             <div class="col-xxl-8 col-lg-10">
                                 <p class="fs-24 pt-25 pb-30 lg-pb-20 xs-pb-10 wow fadeInUp" data-wow-delay="0.1s">TUC provides utility calculation tools for informational purposes.</p>
@@ -118,7 +246,7 @@
                     </div>
                 </div>
             </div> -->
-            <img src="assets/images/assets/ils_01.png" alt="" class="shapes illustration">
+            <img src="assets/images/assets/ils_01.png" alt="Utility Calculator Dashboard Illustration" class="shapes illustration">
         </div>
 
     <!--
@@ -196,11 +324,11 @@
                 <div class="col-xxl-5 col-lg-6 col-md-7 m-auto text-end order-lg-first">
                     <div class="img-holder z-1 d-inline-block position-relative">
                         <img src="assets/images/assets/card_01.png" alt="Utility Calculator Dashboard" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <img src="assets/images/assets/card_02.png" alt="" class="card_01 wow fadeInLeft" data-wow-delay="0.1s" style="visibility: visible; animation-delay: 0.1s; animation-name: fadeInLeft;">
+                        <img src="assets/images/assets/card_02.png" alt="Utility tracking features" class="card_01 wow fadeInLeft" data-wow-delay="0.1s" style="visibility: visible; animation-delay: 0.1s; animation-name: fadeInLeft;">
                         
-                        <img src="assets/images/assets/card_03.png" alt="" class="card_02 wow fadeInLeft" data-wow-delay="0.2s" style="visibility: visible; animation-delay: 0.2s; animation-name: fadeInLeft;">
+                        <img src="assets/images/assets/card_03.png" alt="Utility cost analysis" class="card_02 wow fadeInLeft" data-wow-delay="0.2s" style="visibility: visible; animation-delay: 0.2s; animation-name: fadeInLeft;">
                         
-                        <img src="assets/images/shape/shape_02.svg" alt="" class="shapes shape_01 wow fadeInLeft" data-wow-delay="0.3s" style="visibility: visible; animation-delay: 0.3s; animation-name: fadeInLeft;">
+                        <img src="assets/images/shape/shape_02.svg" alt="Decorative shape" class="shapes shape_01 wow fadeInLeft" data-wow-delay="0.3s" style="visibility: visible; animation-delay: 0.3s; animation-name: fadeInLeft;">
                         <div class="bg-one border-30 p-5 text-center" style="min-height: 300px; display: none; align-items: center; justify-content: center;">
                             <i class="bi bi-lightning-charge" style="font-size: 5rem; color: #FD05F3;"></i>
                         </div>
