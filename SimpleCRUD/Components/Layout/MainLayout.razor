@@ -1,6 +1,12 @@
 ﻿@using SimpleCRUD.Components.Reuseables.Toasts
 @inherits LayoutComponentBase
 
+<HeadContent>
+    <!-- Prevent search engine indexing of authenticated pages -->
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="googlebot" content="noindex, nofollow" />
+    <meta name="bingbot" content="noindex, nofollow" />
+</HeadContent>
 
 <div class="page">
     <div class="sidebar">

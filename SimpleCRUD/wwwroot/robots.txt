@@ -1,0 +1,16 @@
+# Allow only the landing page (root URL) to be indexed
+# All other pages are blocked from search engine indexing
+User-agent: *
+Allow: /$
+Disallow: /Account/
+Disallow: /dashboard
+Disallow: /utility-readings/
+Disallow: /direct-debits/
+Disallow: /reports/
+Disallow: /changelog
+Disallow: /terms-conditions
+Disallow: /*
+
+# Sitemap location (if you create one later)
+# Sitemap: https://tuc.hellodigi.co.uk//sitemap.xml
+
