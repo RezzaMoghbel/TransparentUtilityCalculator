@@ -1,0 +1,325 @@
+@page "/terms-conditions"
+@rendermode InteractiveServer
+
+<PageTitle>Terms and Conditions - Utility Calculator</PageTitle>
+
+<HeadContent>
+    <!-- Landing Page CSS - Scoped to this page only -->
+    <link rel="stylesheet" type="text/css" href="assets/css/style.min.css" media="all">
+    <link rel="stylesheet" type="text/css" href="assets/css/responsive.css" media="all">
+</HeadContent>
+
+<div class="main-page-wrapper dark-bg p-30">
+    <!--
+    =============================================
+        Theme Main Menu
+    ==============================================
+    -->
+    <header class="theme-main-menu menu-style-one">
+        <div class="inner-content bg-wrapper bg-one border-20">
+            <div class="top-header position-relative">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="logo order-lg-0">
+                        <a href="/" class="d-flex align-items-center">
+                            <img src="img/TUC-Logo.png" alt="Utility Calculator Logo" style="max-height: 50px;">
+                        </a>
+                    </div>
+
+                    <div class="right-widget ms-auto ms-lg-0 me-3 me-lg-0 order-lg-3">
+                        <ul class="d-flex align-items-center style-none">
+                            <li class="d-none d-md-inline-block ms-3">
+                                <a href="/Account/Login" class="btn-one">Get Started</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <nav class="navbar navbar-expand-lg p0 order-lg-2">
+                        <button class="navbar-toggler d-block d-lg-none" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
+                                aria-label="Toggle navigation">
+                            <span></span>
+                        </button>
+                        <div class="collapse navbar-collapse" id="navbarNav">
+                            <ul class="navbar-nav align-items-lg-center">
+                                <li class="d-block d-lg-none">
+                                    <div class="logo">
+                                        <a href="/" class="d-block">
+                                            <img src="img/TUC-Logo.png" alt="Utility Calculator Logo" style="max-height: 50px;">
+                                        </a>
+                                    </div>
+                                </li>
+                            <!--    <li class="nav-item">
+                                    <a class="nav-link" href="/#features">Features</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/#how-it-works">How It Works</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/#faq">FAQ</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/terms-conditions">Terms & Conditions</a>
+                                </li> -->
+                                <li class="d-md-none ps-3 pe-3 mt-20">
+                                    <a href="/Account/Login" class="btn-one w-100">Get Started</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!--
+    =====================================================
+        Terms and Conditions Content
+    =====================================================
+    -->
+    <div class="fancy-banner-one position-relative z-1 bg-one border-30 text-center mt-30 pt-130 lg-pt-80 pb-130 lg-pb-80 mb-30 lg-mb-20"><div class="container">
+    <div class="blog-details lg-mt-150 mb-120 lg-mb-80">
+        <div class="container">
+            <div class="row">
+                <div class="col-xl-11 m-auto">
+                    <div class="pe-xl-5 ps-xl-5">
+                        <article class="blog-details-post">
+                            <h1 class="mb-40">Terms and Conditions</h1>
+                            <p class="fs-20 mb-30">
+                                <strong>Last Updated:</strong> @DateTime.Now.ToString("MMMM dd, yyyy")
+                            </p>
+
+                            <h3 class="mt-50 mb-30">Disclaimer</h3>
+                            <p>
+                                This utility calculation service is provided for informational purposes only. All calculations, estimates, and projections are based on the data you enter and should be considered approximations. The Transparent Utility Calculator (TUC) is designed to assist users in tracking and estimating utility costs, but it does not guarantee accuracy or completeness.
+                            </p>
+
+                            <h3 class="mt-50 mb-30">No Warranty</h3>
+                            <p>
+                                This service is provided "as-is" without any warranty or guarantee of accuracy. We do not warrant that the calculations will be error-free or that they will match your actual utility bills. The service may contain technical inaccuracies or typographical errors, and we reserve the right to make changes to the service at any time without notice.
+                            </p>
+                            <p>
+                                We make no representations or warranties regarding:
+                            </p>
+                            <ul class="style-none fs-18 mb-20">
+                                <li class="mb-10">
+                                    <i class="bi bi-dash-circle me-2" style="color: #FD05F3;"></i>
+                                    The accuracy, completeness, or reliability of any calculations or estimates
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-dash-circle me-2" style="color: #FD05F3;"></i>
+                                    That the service will meet your specific requirements or expectations
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-dash-circle me-2" style="color: #FD05F3;"></i>
+                                    That the service will be uninterrupted, timely, secure, or error-free
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-dash-circle me-2" style="color: #FD05F3;"></i>
+                                    That any defects or errors will be corrected
+                                </li>
+                            </ul>
+
+                            <h3 class="mt-50 mb-30">User Responsibility</h3>
+                            <p>
+                                You are solely responsible for verifying all calculations with your utility providers. Always confirm actual costs with your utility company before making financial decisions. You acknowledge that:
+                            </p>
+                            <ul class="style-none fs-18 mb-20">
+                                <li class="mb-10">
+                                    <i class="bi bi-check-circle me-2" style="color: #5AD95F;"></i>
+                                    All data entered into the system is your responsibility
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-check-circle me-2" style="color: #5AD95F;"></i>
+                                    You must verify all meter readings, tariff rates, and other information independently
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-check-circle me-2" style="color: #5AD95F;"></i>
+                                    You should not rely solely on the calculations provided by this service for important financial decisions
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-check-circle me-2" style="color: #5AD95F;"></i>
+                                    You are responsible for maintaining the security and confidentiality of your account
+                                </li>
+                            </ul>
+
+                            <h3 class="mt-50 mb-30">No Liability</h3>
+                            <p>
+                                We accept no liability for any errors, omissions, or inaccuracies in the calculations, nor for any decisions made based on the information provided by this service. To the fullest extent permitted by law, we disclaim all liability for:
+                            </p>
+                            <ul class="style-none fs-18 mb-20">
+                                <li class="mb-10">
+                                    <i class="bi bi-x-circle me-2" style="color: #ff4444;"></i>
+                                    Any direct, indirect, incidental, special, consequential, or punitive damages
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-x-circle me-2" style="color: #ff4444;"></i>
+                                    Loss of profits, revenue, data, or use
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-x-circle me-2" style="color: #ff4444;"></i>
+                                    Any discrepancies between calculated and actual utility costs
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-x-circle me-2" style="color: #ff4444;"></i>
+                                    Any financial losses or damages resulting from the use or inability to use this service
+                                </li>
+                            </ul>
+                            <p>
+                                This limitation of liability applies regardless of the legal theory on which the claim is based, including but not limited to contract, tort, negligence, strict liability, or any other basis.
+                            </p>
+
+                            <h3 class="mt-50 mb-30">Professional Advice</h3>
+                            <p>
+                                This tool is intended to assist with utility cost calculations but does not replace professional financial or utility advice. The information provided by this service should not be construed as:
+                            </p>
+                            <ul class="style-none fs-18 mb-20">
+                                <li class="mb-10">
+                                    <i class="bi bi-info-circle me-2" style="color: #5AD95F;"></i>
+                                    Professional financial advice
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-info-circle me-2" style="color: #5AD95F;"></i>
+                                    Legal advice
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-info-circle me-2" style="color: #5AD95F;"></i>
+                                    Tax advice
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-info-circle me-2" style="color: #5AD95F;"></i>
+                                    Utility provider advice or official billing information
+                                </li>
+                            </ul>
+                            <p>
+                                Consult with qualified professionals (accountants, financial advisors, utility company representatives) for important decisions regarding your utility costs and financial planning.
+                            </p>
+
+                            <h3 class="mt-50 mb-30">Independent Verification</h3>
+                            <p>
+                                All meter readings, tariff rates, and other data should be independently verified. We are not responsible for any discrepancies between calculated and actual costs. You agree that:
+                            </p>
+                            <ul class="style-none fs-18 mb-20">
+                                <li class="mb-10">
+                                    <i class="bi bi-shield-check me-2" style="color: #5AD95F;"></i>
+                                    You will verify all calculations with your utility providers before making any financial commitments
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-shield-check me-2" style="color: #5AD95F;"></i>
+                                    You will not hold us responsible for any differences between estimated and actual costs
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-shield-check me-2" style="color: #5AD95F;"></i>
+                                    You understand that utility rates and charges may change without notice
+                                </li>
+                                <li class="mb-10">
+                                    <i class="bi bi-shield-check me-2" style="color: #5AD95F;"></i>
+                                    You will keep your account information secure and confidential
+                                </li>
+                            </ul>
+
+                            <h3 class="mt-50 mb-30">Service Availability</h3>
+                            <p>
+                                We reserve the right to modify, suspend, or discontinue the service at any time without prior notice. We do not guarantee that the service will be available at all times or that it will be free from errors or interruptions.
+                            </p>
+
+                            <h3 class="mt-50 mb-30">Acceptance of Terms</h3>
+                            <p>
+                                By using this service, you acknowledge that you have read, understood, and agree to these terms and conditions. If you do not agree with these terms, please do not use this service.
+                            </p>
+                            <p>
+                                Your continued use of the service following any changes to these terms constitutes your acceptance of such changes. We recommend reviewing these terms periodically to stay informed of any updates.
+                            </p>
+
+                            <h3 class="mt-50 mb-30">Contact Information</h3>
+                            <p>
+                                If you have any questions about these Terms and Conditions, please contact us through the appropriate channels provided in the application.
+                            </p>
+
+                            <div class="mt-60 pt-40 border-top">
+                                <p class="fs-18 mb-0">
+                                    <strong>By using the Transparent Utility Calculator, you agree to be bound by these Terms and Conditions.</strong>
+                                </p>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    </div>
+
+    <!--
+    =====================================================
+        Footer One
+    =====================================================
+    -->
+    <div class="footer-one border-30 bg-one">
+        <div class="position-relative z-1">
+            <div class="container">
+                <div class="position-relative">
+                    <div class="row">
+                        <div class="col-lg-4">
+                            <div class="footer-intro mb-30">
+                                <div class="logo mb-20">
+                                    <a href="/">
+                                        <img src="img/TUC-Logo.png" alt="Utility Calculator" style="max-height: 50px;">
+                                    </a>
+                                </div>
+                                <p class="fs-18">Track, calculate, and manage your utility costs with ease.</p>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-3 col-6">
+                            <div class="footer-nav mb-20">
+                              <!--  <h6 class="mb-20">Quick Links</h6>
+                                <ul class="footer-nav-link style-none">
+                                    <li><a href="/#features">Features</a></li>
+                                    <li><a href="/#how-it-works">How It Works</a></li>
+                                    <li><a href="/#faq">FAQ</a></li>
+                                    <li><a href="/terms-conditions">Terms & Conditions</a></li>
+                                </ul> -->
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-3 col-6">
+                            <div class="footer-nav mb-20">
+                                <h6 class="mb-20">Account</h6>
+                                <ul class="footer-nav-link style-none">
+                                    <li><a href="/Account/Login">Login</a></li>
+                                    <li><a href="/Account/Register">Register</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="footer-contact mb-20">
+                                <h6 class="mb-20">Legal</h6>
+                                <ul class="footer-nav-link style-none">
+                                    <li><a href="/terms-conditions">Terms & Conditions</a></li>
+                                </ul>
+                                <p class="fs-16 mb-0 mt-20">This service provides utility calculation tools for informational purposes only. All calculations are estimates and should be verified with your utility provider.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="copyright-text m0 mt-30">
+                        <strong>© @DateTime.Now.Year</strong> Utility Calculator. All Rights Reserved.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="scroll-top">
+        <i class="bi bi-arrow-up-short"></i>
+    </button>
+</div>
+
+<!-- Landing Page Scripts - Loaded at end of page to avoid conflicts -->
+<script src="assets/vendor/jquery.min.js"></script>
+<script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="assets/vendor/wow/wow.min.js"></script>
+<script src="assets/vendor/slick/slick.min.js"></script>
+<script src="assets/vendor/fancybox/fancybox.umd.js"></script>
+<script src="assets/vendor/jquery.lazy.min.js"></script>
+<script src="assets/vendor/jquery.counterup.min.js"></script>
+<script src="assets/vendor/jquery.waypoints.min.js"></script>
+<script src="assets/vendor/validator.js"></script>
+<script src="assets/js/theme.js"></script>
+

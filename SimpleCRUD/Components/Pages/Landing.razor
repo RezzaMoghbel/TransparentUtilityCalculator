@@ -1,0 +1,542 @@
+@page "/"
+@rendermode InteractiveServer
+
+<PageTitle>Utility Calculator - Track & Calculate Your Utility Costs</PageTitle>
+
+<HeadContent>
+    <!-- Landing Page CSS - Scoped to this page only -->
+    <link rel="stylesheet" type="text/css" href="assets/css/style.min.css" media="all">
+    <link rel="stylesheet" type="text/css" href="assets/css/responsive.css" media="all">
+    <style>
+        /* Prevent layout shift - hide content until CSS is loaded */
+        .landing-page-content {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+        .landing-page-content.css-loaded {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</HeadContent>
+
+<div class="main-page-wrapper dark-bg p-30 landing-page-content">
+    <!--
+    =============================================
+        Theme Main Menu
+    ==============================================
+    -->
+    <header class="theme-main-menu menu-style-one">
+        <div class="inner-content bg-wrapper bg-one border-20">
+            <div class="top-header position-relative">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="logo order-lg-0">
+                        <a href="/" class="d-flex align-items-center">
+                            <img src="img/TUC-Logo.png" alt="Utility Calculator Logo" style="max-height: 50px;">
+                        </a>
+                    </div>
+
+                    <div class="right-widget ms-auto ms-lg-0 me-3 me-lg-0 order-lg-3">
+                        <ul class="d-flex align-items-center style-none">
+                            <li class="d-none d-md-inline-block ms-3">
+                                <a href="/Account/Login" class="btn-one">Get Started</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <nav class="navbar navbar-expand-lg p0 order-lg-2">
+                        <button class="navbar-toggler d-block d-lg-none" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
+                                aria-label="Toggle navigation">
+                            <span></span>
+                        </button>
+                        <div class="collapse navbar-collapse" id="navbarNav">
+                            <ul class="navbar-nav align-items-lg-center">
+                                <li class="d-block d-lg-none">
+                                    <div class="logo">
+                                        <a href="/" class="d-block">
+                                            <img src="img/TUC-Logo.png" alt="Utility Calculator Logo" style="max-height: 50px;">
+                                        </a>
+                                    </div>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#features">Features</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#how-it-works">How It Works</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#faq">FAQ</a>
+                                </li>
+                                <li class="d-md-none ps-3 pe-3 mt-20">
+                                    <a href="/Account/Login" class="btn-one w-100">Get Started</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!--
+    =============================================
+        Hero Banner
+    ==============================================
+    -->
+
+            <div class="hero-banner-one bg-one border-30 z-1 pt-120 lg-pt-80 pb-100 lg-pb-70 mt-30 lg-mt-20 position-relative">
+            <div class="container position-relative">
+                <div class="row">
+                    <div class="col-lg-7 col-md-7">
+                        <p class="fs-24 fw-500 mb-10 wow fadeInUp">Transparent Utility Calculator</p>
+                        <h1 class="hero-heading wow fadeInUp">Utility Costs<span class="d-inline-block position-relative">Made Simple
+                            <img src="assets/images/shape/shape_01.svg" alt="" class="d-inline-block" onerror="this.style.display='none';">For Everyone!</span></h1>
+                        <div class="row">
+                            <div class="col-xxl-8 col-lg-10">
+                                <p class="fs-24 pt-25 pb-30 lg-pb-20 xs-pb-10 wow fadeInUp" data-wow-delay="0.1s">TUC provides utility calculation tools for informational purposes.</p>
+                            </div>
+                        </div>
+                        <ul class="style-none d-flex align-items-center flex-wrap">
+                            <li class="mt-10"><a href="/Account/Login" class="btn-one me-4">Get Started</a></li>
+                            <li class="mt-10"><a href="/Account/Register" class="btn-two xl">Sign Up</a></li>
+                        </ul>
+                        <p class="fs-22 pt-100 md-pt-50 md-pb-20">Transparent billing for multi-building property managers </p>
+                    </div>
+                </div>
+            </div>
+        <!--    <div class="client-logo-wrapper">
+                <div class="container">
+                    <div class="partner-logo-one">
+                        <div class="item"><img src="assets/images/assets/images/logo/p_logo_01.png" alt="" class="m-auto"></div>
+                        <div class="item"><img src="assets/images/assets/images/logo/p_logo_02.png" alt="" class="m-auto"></div>
+                        <div class="item"><img src="assets/images/assets/images/logo/p_logo_03.png" alt="" class="m-auto"></div>
+                        <div class="item"><img src="assets/images/assets/images/logo/p_logo_04.png" alt="" class="m-auto"></div>
+                        <div class="item"><img src="assets/images/assets/images/logo/p_logo_05.png" alt="" class="m-auto"></div>
+                        <div class="item"><img src="assets/images/assets/images/logo/p_logo_06.png" alt="" class="m-auto"></div>
+                        <div class="item"><img src="assets/images/assets/images/logo/p_logo_04.png" alt="" class="m-auto"></div>
+                    </div>
+                </div>
+            </div> -->
+            <img src="assets/images/assets/ils_01.png" alt="" class="shapes illustration">
+        </div>
+
+    <!--
+    =====================================================
+        Block Feature Two - Key Features
+    =====================================================
+    -->
+    <div id="features" class="block-feature-two mb-30 lg-mb-20">
+        <div class="row gx-xl-4">
+            <div class="col-lg-4 d-flex wow fadeInUp mt-30 lg-mt-20">
+                <div class="card-style-one text-center border-30 bg-one w-100">
+                    <div class="icon rounded-circle d-flex align-items-center justify-content-center m-auto">
+                        <i class="bi bi-calculator" style="font-size: 3rem; color: #FD05F3;"></i>
+                    </div>
+                    <h3>Accurate Calculations</h3>
+                    <p class="fs-24 fw-500">Calculate utility costs with precision using your meter readings and tariff rates.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 d-flex wow fadeInUp mt-30 lg-mt-20" data-wow-delay="0.1s">
+                <div class="card-style-one text-center border-30 bg-one w-100">
+                    <div class="icon rounded-circle d-flex align-items-center justify-content-center m-auto">
+                        <i class="bi bi-graph-up" style="font-size: 3rem; color: #5AD95F;"></i>
+                    </div>
+                    <h3>Track Trends</h3>
+                    <p class="fs-24 fw-500">Visualize your consumption patterns with charts and reports to identify savings opportunities.</p>
+                </div>
+            </div>
+            <div class="col-lg-4 d-flex wow fadeInUp mt-30 lg-mt-20" data-wow-delay="0.2s">
+                <div class="card-style-one text-center border-30 bg-one w-100">
+                    <div class="icon rounded-circle d-flex align-items-center justify-content-center m-auto">
+                        <i class="bi bi-calendar-check" style="font-size: 3rem; color: #FD05F3;"></i>
+                    </div>
+                    <h3>Easy Management</h3>
+                    <p class="fs-24 fw-500">Record meter readings, track direct debits, and manage all your utility data in one place.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--
+    =====================================================
+        Block Feature One - Main Value Proposition
+    =====================================================
+    -->
+    <div id="how-it-works" class="block-feature-one border-30 bg-three mt-30 lg-mt-20 pt-150 lg-pt-80 pb-200 lg-pb-140">
+        <div class="container">
+            <div class="row">
+                <div class="col-xxl-7 col-lg-6 order-lg-last">
+                    <div class="ps-lg-5 ms-xxl-4 md-mb-60">
+                        <div class="title-one">
+                            <h2 class="color-dark">Take Control of Your Utility Costs</h2>
+                        </div>
+                        <p class="fs-28 color-dark fw-500 mt-40 md-mt-20">
+                            Our utility calculator helps you understand and manage your energy consumption, water usage, and gas bills with ease.
+                        </p>
+                        <div class="counter-wrapper mt-25 mb-70 lg-mb-50">
+                            <div class="row">
+                                <div class="col-7">
+                                    <div class="counter-block-one mt-20">
+                                        <div class="main-count fw-500"><span class="counter">100</span>%</div>
+                                        <span class="fs-22 color-dark">User Control</span>
+                                    </div>
+                                </div>
+                                <div class="col-5">
+                                    <div class="counter-block-one mt-20">
+                                        <div class="main-count fw-500"><span class="counter">24</span>/7</div>
+                                        <span class="fs-22 color-dark">Access</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="/Account/Register" class="btn-two style-two xl">Start Tracking Now</a>
+                    </div>
+                </div>
+                <div class="col-xxl-5 col-lg-6 col-md-7 m-auto text-end order-lg-first">
+                    <div class="img-holder z-1 d-inline-block position-relative">
+                        <img src="assets/images/assets/card_01.png" alt="Utility Calculator Dashboard" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <img src="assets/images/assets/card_02.png" alt="" class="card_01 wow fadeInLeft" data-wow-delay="0.1s" style="visibility: visible; animation-delay: 0.1s; animation-name: fadeInLeft;">
+                        
+                        <img src="assets/images/assets/card_03.png" alt="" class="card_02 wow fadeInLeft" data-wow-delay="0.2s" style="visibility: visible; animation-delay: 0.2s; animation-name: fadeInLeft;">
+                        
+                        <img src="assets/images/shape/shape_02.svg" alt="" class="shapes shape_01 wow fadeInLeft" data-wow-delay="0.3s" style="visibility: visible; animation-delay: 0.3s; animation-name: fadeInLeft;">
+                        <div class="bg-one border-30 p-5 text-center" style="min-height: 300px; display: none; align-items: center; justify-content: center;">
+                            <i class="bi bi-lightning-charge" style="font-size: 5rem; color: #FD05F3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--
+    =====================================================
+        FAQ Section
+    =====================================================
+    -->
+    <div id="faq" class="faq-section-one bg-four position-relative z-1 pt-150 lg-pt-80 mt-30 pb-120 lg-pb-80 border-30 mb-30 lg-mb-20">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-9 m-auto">
+                    <div class="title-one text-center mb-80 xl-mb-60 md-mb-40">
+                        <h2 class="color-dark">Frequently Asked Questions</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="accordion accordion-style-one" id="accordionOne">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                    What is the Utility Calculator?
+                                </button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionOne">
+                                <div class="accordion-body">
+                                    <p class="fs-22">The Utility Calculator is a web-based application designed to help you record meter readings, track utility consumption over time, and generate cost estimates. The tool supports multiple utility types and provides visualization features to help you understand your usage patterns. This service is provided for informational purposes only.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                    How accurate are the calculations?
+                                </button>
+                            </h2>
+                            <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#accordionOne">
+                                <div class="accordion-body">
+                                    <p class="fs-22">All calculations are estimates based on the data you enter. The accuracy depends entirely on the correctness of your meter readings and tariff information. We cannot guarantee that calculated costs will match your actual utility bills. Always verify calculations with your utility provider before making financial decisions. We accept no liability for calculation errors or discrepancies.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="true" aria-controls="collapseThree">
+                                    What utilities can I track?
+                                </button>
+                            </h2>
+                            <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#accordionOne">
+                                <div class="accordion-body">
+                                    <p class="fs-22">The system supports tracking for electricity, cold water, and hot water utilities. You can configure each utility type with your own tariff rates, standing charges, and VAT rates. The system allows you to record multiple readings over time and compare consumption periods. We do not guarantee that all utility types or configurations will be supported in all scenarios.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="accordion accordion-style-one" id="accordionTwo">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAOne" aria-expanded="false" aria-controls="collapseAOne">
+                                    Is my data secure?
+                                </button>
+                            </h2>
+                            <div id="collapseAOne" class="accordion-collapse collapse" data-bs-parent="#accordionTwo">
+                                <div class="accordion-body">
+                                    <p class="fs-22">We implement standard security practices to protect user data, including authentication and access controls. However, no online system can guarantee complete security against all threats. We are not liable for data loss, breaches, unauthorized access, or corruption. Users are responsible for maintaining their own data backups and using strong account credentials.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseATwo" aria-expanded="false" aria-controls="collapseATwo">
+                                    Can I export my data?
+                                </button>
+                            </h2>
+                            <div id="collapseATwo" class="accordion-collapse collapse" data-bs-parent="#accordionTwo">
+                                <div class="accordion-body">
+                                    <p class="fs-22">The application includes reporting features that allow you to view and analyze your utility data. Export capabilities may vary and are subject to change. We cannot guarantee that all data export formats will be available at all times. Users should maintain independent records of important information and not rely solely on the system for data retention.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAThree" aria-expanded="true" aria-controls="collapseAThree">
+                                    How do I get started?
+                                </button>
+                            </h2>
+                            <div id="collapseAThree" class="accordion-collapse collapse" data-bs-parent="#accordionTwo">
+                                <div class="accordion-body">
+                                    <p class="fs-22">To begin, create an account and log in. You can then add utility types, enter meter readings, and configure your tariff rates. The system will help you track consumption and estimate costs. Service availability and features may change without notice. The service is provided without warranty, and we are not responsible for service interruptions or feature changes.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--
+    =====================================================
+        Fancy Banner One - CTA
+    =====================================================
+    -->
+    <div class="fancy-banner-one position-relative z-1 bg-one border-30 text-center pt-130 lg-pt-80 pb-130 lg-pb-80 mb-30 lg-mb-20">
+        <div class="container">
+            <div class="row">
+                <div class="col-xxl-8 col-lg-7 m-auto">
+                    <div class="title-one mb-35 lg-mb-30">
+                        <h2>Ready to Start Tracking Your Utilities?</h2>
+                    </div>
+                </div>
+            </div>
+            <p class="fs-28 mb-45 lg-mb-30">Create an account and begin managing your utility costs today.</p>
+            <a href="/Account/Register" class="btn-two xl">Get Started</a>
+        </div>
+    </div>
+
+    <!--
+    =====================================================
+        Footer One
+    =====================================================
+    -->
+    <div class="footer-one border-30 bg-one">
+        <div class="position-relative z-1">
+            <div class="container">
+                <div class="position-relative">
+                    <div class="row">
+                        <div class="col-lg-4">
+                            <div class="footer-intro mb-30">
+                                <div class="logo mb-20">
+                                    <a href="/">
+                                        <img src="img/TUC-Logo.png" alt="Utility Calculator" style="max-height: 50px;">
+                                    </a>
+                                </div>
+                                <p class="fs-18">Track, calculate, and manage your utility costs with ease.</p>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-3 col-6">
+                            <div class="footer-nav mb-20">
+                                <h6 class="mb-20">Quick Links</h6>
+                                <ul class="footer-nav-link style-none">
+                                    <li><a href="#features">Features</a></li>
+                                    <li><a href="#how-it-works">How It Works</a></li>
+                                    <li><a href="#faq">FAQ</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-3 col-6">
+                            <div class="footer-nav mb-20">
+                                <h6 class="mb-20">Account</h6>
+                                <ul class="footer-nav-link style-none">
+                                    <li><a href="/Account/Login">Login</a></li>
+                                    <li><a href="/Account/Register">Register</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="footer-contact mb-20">
+                                <h6 class="mb-20">Legal</h6>
+                                <ul class="footer-nav-link style-none">
+                                    <li><a href="/terms-conditions">Terms & Conditions</a></li>
+                                </ul>
+                                <p class="fs-16 mb-0 mt-20">This service provides utility calculation tools for informational purposes only. All calculations are estimates and should be verified with your utility provider.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="copyright-text m0 mt-30">
+                        <strong>© @DateTime.Now.Year</strong> Utility Calculator. All Rights Reserved.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="scroll-top">
+        <i class="bi bi-arrow-up-short"></i>
+    </button>
+</div>
+
+<!-- Landing Page Scripts - Loaded at end of page to avoid conflicts -->
+<script>
+    (function() {
+        // Ensure CSS is loaded before showing content to prevent layout shift
+        function checkCSSLoaded() {
+            var styleSheet = null;
+            for (var i = 0; i < document.styleSheets.length; i++) {
+                var sheet = document.styleSheets[i];
+                try {
+                    if (sheet.href && (sheet.href.indexOf('style.min.css') !== -1 || sheet.href.indexOf('responsive.css') !== -1)) {
+                        styleSheet = sheet;
+                        break;
+                    }
+                } catch (e) {
+                    // Cross-origin stylesheet, skip
+                }
+            }
+            
+            if (styleSheet || document.querySelector('link[href*="style.min.css"]')) {
+                // CSS is loaded, show content
+                var content = document.querySelector('.landing-page-content');
+                if (content) {
+                    content.classList.add('css-loaded');
+                }
+                return true;
+            }
+            return false;
+        }
+        
+        // Check immediately
+        if (!checkCSSLoaded()) {
+            // Retry checking CSS load
+            var attempts = 0;
+            var maxAttempts = 50;
+            var checkInterval = setInterval(function() {
+                attempts++;
+                if (checkCSSLoaded() || attempts >= maxAttempts) {
+                    clearInterval(checkInterval);
+                    // Show content even if CSS check fails (fallback)
+                    var content = document.querySelector('.landing-page-content');
+                    if (content) {
+                        content.classList.add('css-loaded');
+                    }
+                }
+            }, 50);
+        } else {
+            // CSS already loaded
+            var content = document.querySelector('.landing-page-content');
+            if (content) {
+                content.classList.add('css-loaded');
+            }
+        }
+        
+        // Prevent duplicate loading
+        if (window.landingPageScriptsLoaded) {
+            return;
+        }
+
+        var scripts = [
+            { src: 'assets/vendor/jquery.min.js', check: function() { return typeof jQuery !== 'undefined'; } },
+            { src: 'assets/vendor/bootstrap/js/bootstrap.bundle.min.js', check: null },
+            { src: 'assets/vendor/wow/wow.min.js', check: function() { return typeof WOW !== 'undefined'; } },
+            { src: 'assets/vendor/slick/slick.min.js', check: function() { return typeof jQuery !== 'undefined' && typeof jQuery.fn.slick !== 'undefined'; } },
+            { src: 'assets/vendor/fancybox/fancybox.umd.js', check: null },
+            { src: 'assets/vendor/jquery.lazy.min.js', check: function() { return typeof jQuery !== 'undefined' && typeof jQuery.fn.lazy !== 'undefined'; } },
+            { src: 'assets/vendor/jquery.waypoints.min.js', check: function() { return typeof jQuery !== 'undefined' && typeof jQuery.fn.waypoint !== 'undefined'; } },
+            { src: 'assets/vendor/jquery.counterup.min.js', check: function() { return typeof jQuery !== 'undefined' && typeof jQuery.fn.counterUp !== 'undefined'; } },
+            { src: 'assets/vendor/validator.js', check: null },
+            { src: 'assets/js/theme.js', check: null }
+        ];
+
+        function loadScript(src, check, callback) {
+            // Check if script is already loaded
+            var existingScript = document.querySelector('script[src="' + src + '"]');
+            if (existingScript) {
+                if (check && !check()) {
+                    // Script loaded but dependency not ready, wait
+                    setTimeout(function() {
+                        if (check()) {
+                            if (callback) callback();
+                        } else {
+                            loadScript(src, check, callback);
+                        }
+                    }, 50);
+                    return;
+                }
+                if (callback) callback();
+                return;
+            }
+
+            var script = document.createElement('script');
+            script.src = src;
+            script.async = false;
+            script.onload = function() {
+                if (check) {
+                    var attempts = 0;
+                    var maxAttempts = 20;
+                    function verify() {
+                        attempts++;
+                        if (check()) {
+                            if (callback) callback();
+                        } else if (attempts < maxAttempts) {
+                            setTimeout(verify, 50);
+                        } else {
+                            console.warn('Script dependency check failed for: ' + src);
+                            if (callback) callback();
+                        }
+                    }
+                    verify();
+                } else {
+                    if (callback) callback();
+                }
+            };
+            script.onerror = function() {
+                console.error('Failed to load script: ' + src);
+                if (callback) callback();
+            };
+            document.head.appendChild(script);
+        }
+
+        function loadScriptsSequentially(index) {
+            if (index >= scripts.length) {
+                window.landingPageScriptsLoaded = true;
+                return;
+            }
+
+            var scriptInfo = scripts[index];
+            loadScript(scriptInfo.src, scriptInfo.check, function() {
+                loadScriptsSequentially(index + 1);
+            });
+        }
+
+        // Start loading scripts
+        loadScriptsSequentially(0);
+    })();
+</script>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Wait a bit for scripts to load, then ensure theme.js is initialized
+            await Task.Delay(500);
+            // Scripts are loaded via the inline script above
+        }
+    }
+}
+
