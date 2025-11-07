@@ -1,0 +1,138 @@
+@page "/changelog"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using System.Reflection
+@using System.Text.RegularExpressions
+@inject IWebHostEnvironment HostEnv
+
+<AccessLevelView MinimumAccessLevelName="all">
+    <PageTitle>Changelog - Version 2.0.2</PageTitle>
+
+    <div class="container-fluid py-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex align-items-center mb-4">
+                    <h1 class="me-3">Changelog</h1>
+                    <span class="badge bg-primary fs-6">@appVersion</span>
+                </div>
+
+                <!-- Version 2.0.2 -->
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">
+                            <i class="bi bi-tag-fill me-2"></i>Version 2.0.2
+                            <small class="ms-2 opacity-75">@releaseDate</small>
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="text-primary mb-3">
+                            <i class="bi bi-star-fill me-2"></i>New Features
+                        </h5>
+                        <ul class="list-unstyled ms-3 mb-4">
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <strong>Confirmation Modals:</strong> Added confirmation dialogs for all Create, Update, and Delete operations to prevent accidental data changes
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <strong>Change Tracking:</strong> Update forms now show a detailed comparison table of old vs new values before saving
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <strong>Unsaved Changes Warning:</strong> Users are now warned when attempting to cancel with unsaved changes, showing exactly what will be lost
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                <strong>Reusable Confirmation Component:</strong> Created a flexible, reusable ConfirmationModal component for consistent user experience
+                            </li>
+                        </ul>
+
+                        <h5 class="text-warning mb-3">
+                            <i class="bi bi-tools me-2"></i>Improvements
+                        </h5>
+                        <ul class="list-unstyled ms-3 mb-4">
+                            <li class="mb-2">
+                                <i class="bi bi-arrow-up-circle-fill text-info me-2"></i>
+                                <strong>Decimal Input Precision:</strong> Improved decimal number input fields to accept precise values (e.g., 0.0191) without validation errors
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-arrow-up-circle-fill text-info me-2"></i>
+                                <strong>Form Validation:</strong> Enhanced form validation flow to properly display confirmation modals before submission
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-arrow-up-circle-fill text-info me-2"></i>
+                                <strong>User Experience:</strong> Better visual feedback and clearer information display in confirmation dialogs
+                            </li>
+                        </ul>
+
+                        <h5 class="text-danger mb-3">
+                            <i class="bi bi-bug-fill me-2"></i>Bug Fixes
+                        </h5>
+                        <ul class="list-unstyled ms-3">
+                            <li class="mb-2">
+                                <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                <strong>Fixed:</strong> Resolved issue where format strings (0.###) were displayed literally in confirmation modals
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                <strong>Fixed:</strong> Corrected nullable type formatting errors (DateTime? and decimal?) in change tracking
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                <strong>Fixed:</strong> Resolved modal display issues by properly handling form submission and state updates
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-x-circle-fill text-danger me-2"></i>
+                                <strong>Fixed:</strong> Fixed ChildContent parameter issue in ConfirmationModal component (Blazor convention)
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Previous Versions (Placeholder for future versions) -->
+                <div class="card mb-4 shadow-sm border-secondary">
+                    <div class="card-header bg-secondary text-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-clock-history me-2"></i>Previous Versions
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Version 2.0.1 and earlier:</strong> See previous release notes for details about earlier features and improvements.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <a href="/" class="btn btn-primary">
+                        <i class="bi bi-house-door me-2"></i>Return to Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</AccessLevelView>
+
+@code {
+    private string appVersion = "";
+    private string releaseDate = DateTime.Now.ToString("MMMM dd, yyyy");
+
+    protected override void OnInitialized()
+    {
+        var asm = Assembly.GetEntryAssembly();
+        var infoVer = asm?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
+        if (!string.IsNullOrWhiteSpace(infoVer))
+        {
+            var m = Regex.Match(infoVer, @"^\d+\.\d+\.\d+");
+            appVersion = m.Success ? "v" + m.Value : "v" + infoVer.Split('+')[0];
+        }
+        else
+        {
+            appVersion = "v" + asm?.GetName().Version?.ToString(3) ?? "0.0.0";
+        }
+    }
+}
+
