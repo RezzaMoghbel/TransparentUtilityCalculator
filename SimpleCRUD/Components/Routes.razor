@@ -5,11 +5,20 @@
 <CascadingAuthenticationState>
     <Router AppAssembly="typeof(Program).Assembly">
         <Found Context="routeData">
-            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
-                <NotAuthorized>
-                    <RedirectToLogin />
-                </NotAuthorized>
-            </AuthorizeRouteView>
+            @if (routeData.PageType?.Name == "Landing" || routeData.PageType?.Name == "TermsConditions")
+            {
+                @* Landing page and Terms page - no layout, no auth required *@
+                <RouteView RouteData="routeData" />
+            }
+            else
+            {
+                @* All other pages - require auth and use MainLayout *@
+                <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                    <NotAuthorized>
+                        <RedirectToLogin />
+                    </NotAuthorized>
+                </AuthorizeRouteView>
+            }
             <FocusOnNavigate RouteData="routeData" Selector="h1" />
         </Found>
     </Router>
