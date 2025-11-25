@@ -10,6 +10,7 @@ using SimpleCRUD.Data.Repositories;
 using SimpleCRUD.Data.RepositoriesAbstractions;
 using SimpleCRUD.Engine.Identity;
 using SimpleCRUD.Engine.Test;
+using SimpleCRUD.Engine.DirectDebit;
 using SimpleCRUD.Services;
 using Serilog;
 
@@ -109,6 +110,7 @@ builder.Services.AddScoped(typeof(IdentityAccessLevelHandler<>));
 builder.Services.AddScoped(typeof(IdentityUserHandler<>));
 builder.Services.AddScoped(typeof(UtilityReadingHandler<>));
 builder.Services.AddScoped(typeof(UtilityReportHandler<>));
+builder.Services.AddScoped(typeof(DirectDebitHandler<>));
 
 
 try
