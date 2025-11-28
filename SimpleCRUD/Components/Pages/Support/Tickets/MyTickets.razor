@@ -1,0 +1,262 @@
+@page "/support/my-tickets"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject AuthenticationStateProvider AuthProvider
+@inject IdentityUserHandler<string> IdentityUserHandler
+@inject SupportTicketHandler TicketHandler
+@inject SupportLookupHandler LookupHandler
+@inject SupportPermissionService PermissionService
+@inject ToastService ToastService
+@inject NavigationManager NavManager
+@inject UserManager<ApplicationUser> UserManager
+
+<Toast />
+
+<AccessLevelView>
+    <PageTitle>My Support Tickets</PageTitle>
+
+    <div class="flex-sp-list-header">
+        <h1 class="px-1">My Tickets</h1>
+        @if (canCreateTickets)
+        {
+            <AddNewButton Route="/support/my-tickets/create" Label="ticket" ExtraStyleClass="btn-sm" />
+        }
+    </div>
+
+    @if (isLoading)
+    {
+        <p>Loading tickets...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <p class="text-danger">@loadError</p>
+    }
+    else
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small text-muted">Status</label>
+                        <select class="form-select form-select-sm" @onchange="OnStatusChanged" value="@selectedStatusCode">
+                            <option value="">All statuses</option>
+                            @foreach (var status in statuses)
+                            {
+                                <option value="@status.Code">@status.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small text-muted">Priority</label>
+                        <select class="form-select form-select-sm" @onchange="OnPriorityChanged" value="@selectedPriorityCode">
+                            <option value="">All priorities</option>
+                            @foreach (var priority in priorities)
+                            {
+                                <option value="@priority.Code">@priority.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small text-muted">Search</label>
+                        <input class="form-control form-control-sm"
+                               placeholder="Search titles or descriptions"
+                               @bind="searchTerm"
+                               @bind:event="oninput" />
+                    </div>
+                    <div class="col-12 col-md-2 d-flex align-items-end">
+                        <button class="btn btn-outline-secondary btn-sm w-100" @onclick="OnFilterSubmit">Apply</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (!tickets.Any())
+        {
+            <p>No tickets found.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ticket in tickets)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@ticket.Title</td>
+                                <td>@GetStatusName(ticket.StatusId)</td>
+                                <td>@GetPriorityName(ticket.PriorityId)</td>
+                                <td>@ticket.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
+                                <td>@(ticket.UpdatedAt?.ToLocalTime().ToString("dd MMM yyyy HH:mm") ?? "-")</td>
+                                <td>
+                                    <ViewButton Route="@($"/support/my-tickets/{ticket.Id}")" ExtraStyleClass="btn-sm" DisplayTitle="true" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center gap-3 my-3">
+                <div>
+                    <label class="form-label me-2">Page size</label>
+                    <select class="form-select form-select-sm d-inline-block" style="width:auto"
+                            @onchange="OnPageSizeChanged" value="@pageSize">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                    </select>
+                </div>
+                <Pagination TotalItems="@totalCount"
+                            PageSize="@pageSize"
+                            CurrentPage="@currentPage"
+                            CurrentPageChanged="OnPageChanged"
+                            MaxVisiblePages="7" />
+            </div>
+        }
+    }
+</AccessLevelView>
+
+@code {
+    private readonly List<SupportTicket> tickets = new();
+    private readonly List<TicketStatus> statuses = new();
+    private readonly List<TicketPriority> priorities = new();
+
+    private bool isLoading = true;
+    private string? loadError;
+    private string? userId;
+    private string? searchTerm;
+    private string? selectedStatusCode;
+    private string? selectedPriorityCode;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalCount;
+    private bool canCreateTickets;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var appUser = await UserManager.GetUserAsync(authState.User);
+        userId = appUser?.Id;
+
+        var permissionSet = await PermissionService.GetPermissionsAsync(authState.User);
+        canCreateTickets = permissionSet.Tickets.Create;
+
+        await LoadLookupsAsync();
+        await LoadTicketsAsync();
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        var statusResult = await LookupHandler.GetTicketStatusesAsync();
+        if (statusResult.IsSuccess && statusResult.Data is not null)
+        {
+            statuses.Clear();
+            statuses.AddRange(statusResult.Data);
+        }
+        else if (!string.IsNullOrEmpty(statusResult.ErrorMessage))
+        {
+            ToastService.ShowError(statusResult.ErrorMessage);
+        }
+
+        var priorityResult = await LookupHandler.GetTicketPrioritiesAsync();
+        if (priorityResult.IsSuccess && priorityResult.Data is not null)
+        {
+            priorities.Clear();
+            priorities.AddRange(priorityResult.Data);
+        }
+        else if (!string.IsNullOrEmpty(priorityResult.ErrorMessage))
+        {
+            ToastService.ShowError(priorityResult.ErrorMessage);
+        }
+    }
+
+    private async Task LoadTicketsAsync()
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            loadError = "Unable to determine current user.";
+            isLoading = false;
+            return;
+        }
+
+        isLoading = true;
+        loadError = null;
+
+        var request = new TicketListRequest
+        {
+            UserId = userId,
+            StatusCode = string.IsNullOrWhiteSpace(selectedStatusCode) ? null : selectedStatusCode,
+            PriorityCode = string.IsNullOrWhiteSpace(selectedPriorityCode) ? null : selectedPriorityCode,
+            Search = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
+            PageNumber = currentPage,
+            PageSize = pageSize
+        };
+
+        var result = await TicketHandler.GetTicketsForUserAsync(request);
+        if (!result.IsSuccess || result.Data is null)
+        {
+            loadError = result.ErrorMessage ?? "Failed to load tickets.";
+            ToastService.ShowError(loadError);
+            isLoading = false;
+            return;
+        }
+
+        tickets.Clear();
+        tickets.AddRange(result.Data);
+        totalCount = tickets.FirstOrDefault()?.TotalCount ?? tickets.Count;
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private Task OnStatusChanged(ChangeEventArgs e)
+    {
+        selectedStatusCode = e.Value?.ToString();
+        return Task.CompletedTask;
+    }
+
+    private Task OnPriorityChanged(ChangeEventArgs e)
+    {
+        selectedPriorityCode = e.Value?.ToString();
+        return Task.CompletedTask;
+    }
+
+    private async Task OnFilterSubmit()
+    {
+        currentPage = 1;
+        await LoadTicketsAsync();
+    }
+
+    private async Task OnPageChanged(int newPage)
+    {
+        currentPage = newPage;
+        await LoadTicketsAsync();
+    }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var newSize) && newSize > 0)
+        {
+            pageSize = newSize;
+            currentPage = 1;
+            await LoadTicketsAsync();
+        }
+    }
+
+    private string GetStatusName(int statusId)
+        => statuses.FirstOrDefault(s => s.Id == statusId)?.Name ?? "-";
+
+    private string GetPriorityName(int priorityId)
+        => priorities.FirstOrDefault(p => p.Id == priorityId)?.Name ?? "-";
+}
+

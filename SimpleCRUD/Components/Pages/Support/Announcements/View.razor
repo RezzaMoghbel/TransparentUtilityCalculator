@@ -1,0 +1,156 @@
+@page "/support/announcements/{id:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject AuthenticationStateProvider AuthProvider
+@inject SupportAnnouncementHandler AnnouncementHandler
+@inject SupportLookupHandler LookupHandler
+@inject SupportPermissionService PermissionService
+@inject ToastService ToastService
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavManager
+
+<Toast />
+
+<AccessLevelView>
+    <PageTitle>Announcement Details</PageTitle>
+
+    @if (isLoading)
+    {
+        <p>Loading announcement...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert alert-danger">@loadError</div>
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back</button>
+    }
+    else if (announcement is null)
+    {
+        <p>Announcement not found.</p>
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back</button>
+    }
+    else
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <h1 class="h3 mb-1">@announcement.Title</h1>
+                        <div class="text-muted small">Published @announcement.PublishedAt?.ToLocalTime():g</div>
+                    </div>
+                    <span class="badge bg-secondary">@GetCategoryName(announcement.CategoryId)</span>
+                </div>
+                <hr />
+                <p style="white-space:pre-wrap;">@announcement.Body</p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Updates</h2>
+            </div>
+            <div class="card-body">
+                @if (!updates.Any())
+                {
+                    <p class="text-muted">No updates yet.</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled">
+                        @foreach (var update in updates)
+                        {
+                            <li class="mb-3">
+                                <div class="fw-semibold">@update.CreatedAt.ToLocalTime():g</div>
+                                <div style="white-space:pre-wrap;">@update.Body</div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back to announcements</button>
+    }
+</AccessLevelView>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private SupportAnnouncement? announcement;
+    private readonly List<SupportAnnouncementUpdate> updates = new();
+    private readonly List<IssueCategory> categories = new();
+
+    private bool isLoading = true;
+    private string? loadError;
+    private int? userBuildingId;
+    private bool canReadAnnouncements;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        await InitializeAsync();
+        isLoading = false;
+    }
+
+    private async Task InitializeAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var user = await UserManager.GetUserAsync(authState.User);
+        userBuildingId = user?.BuildingId;
+
+        var permissions = await PermissionService.GetPermissionsAsync(authState.User);
+        canReadAnnouncements = permissions.Announcements.Read;
+
+        var categoryResult = await LookupHandler.GetIssueCategoriesAsync();
+        if (categoryResult.IsSuccess && categoryResult.Data is not null)
+        {
+            categories.Clear();
+            categories.AddRange(categoryResult.Data);
+        }
+
+        if (!canReadAnnouncements)
+        {
+            loadError = "You do not have access to announcements.";
+            return;
+        }
+
+        var announcementResult = await AnnouncementHandler.GetAnnouncementByIdAsync(Id);
+        if (!announcementResult.IsSuccess || announcementResult.Data is null)
+        {
+            loadError = announcementResult.ErrorMessage ?? "Announcement not found.";
+            return;
+        }
+
+        announcement = announcementResult.Data;
+
+        if (!IsAnnouncementVisible(announcement))
+        {
+            loadError = "You are not allowed to view this announcement.";
+            announcement = null;
+            return;
+        }
+
+        var updateResult = await AnnouncementHandler.GetUpdatesAsync(Id);
+        if (updateResult.IsSuccess && updateResult.Data is not null)
+        {
+            updates.Clear();
+            updates.AddRange(updateResult.Data);
+        }
+    }
+
+    private bool IsAnnouncementVisible(SupportAnnouncement item)
+    {
+        if (!item.BuildingId.HasValue)
+        {
+            return true;
+        }
+
+        return userBuildingId.HasValue && userBuildingId.Value == item.BuildingId.Value;
+    }
+
+    private string GetCategoryName(int? categoryId)
+        => categories.FirstOrDefault(c => c.Id == categoryId)?.Name ?? "General";
+
+    private void GoBack() => NavManager.NavigateTo("/support/announcements");
+}
+

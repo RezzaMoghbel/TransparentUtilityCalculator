@@ -1,0 +1,194 @@
+@page "/support/admin/announcements/create"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject AuthenticationStateProvider AuthProvider
+@inject SupportAnnouncementHandler AnnouncementHandler
+@inject SupportLookupHandler LookupHandler
+@inject SupportPermissionService PermissionService
+@inject ToastService ToastService
+@inject NavigationManager NavManager
+@inject UserManager<ApplicationUser> UserManager
+
+<Toast />
+
+<AccessLevelView MinimumAccessLevelName="Admin">
+    <PageTitle>Create Announcement</PageTitle>
+
+    <h1 class="mb-3">Create Announcement</h1>
+
+    @if (!canCreateAnnouncements)
+    {
+        <div class="alert alert-warning">
+            You do not have permission to create announcements.
+        </div>
+    }
+    else if (isLoading)
+    {
+        <p>Loading lookups...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert alert-danger">@loadError</div>
+    }
+    else
+    {
+        <EditForm Model="@formModel" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Title</label>
+                <InputText class="form-control" @bind-Value="formModel.Title" maxlength="200" />
+                <ValidationMessage For="@(() => formModel.Title)" />
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold">Scope</label>
+                    <select class="form-select" @bind="formModel.ScopeId">
+                        @foreach (var scope in scopes)
+                        {
+                            <option value="@scope.Id">@scope.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold">Building</label>
+                    <select class="form-select" @bind="formModel.BuildingId" disabled="@IsGlobalScope">
+                        <option value="">All buildings</option>
+                        @foreach (var building in buildings)
+                        {
+                            <option value="@building.Id">@building.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold">Category</label>
+                    <select class="form-select" @bind="formModel.CategoryId">
+                        <option value="">General</option>
+                        @foreach (var category in categories)
+                        {
+                            <option value="@category.Id">@category.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3 mt-3">
+                <label class="form-label fw-semibold">Body</label>
+                <InputTextArea class="form-control" rows="8" @bind-Value="formModel.Body" />
+                <ValidationMessage For="@(() => formModel.Body)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Publish date (optional)</label>
+                <InputDate class="form-control" @bind-Value="formModel.PublishedAt" />
+            </div>
+
+            <div class="form-check form-switch mb-3">
+                <InputCheckbox class="form-check-input" @bind-Value="formModel.IsActive" />
+                <label class="form-check-label">Active</label>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                    @(isSaving ? "Saving..." : "Create Announcement")
+                </button>
+                <button class="btn btn-outline-secondary" type="button" @onclick="Cancel">Cancel</button>
+            </div>
+        </EditForm>
+    }
+</AccessLevelView>
+
+@code {
+    private readonly List<IssueCategory> categories = new();
+    private readonly List<BuildingOption> buildings = new();
+    private readonly List<AnnouncementScope> scopes = new();
+
+    private AnnouncementCreateRequest formModel = new();
+    private bool isLoading = true;
+    private bool isSaving;
+    private bool canCreateAnnouncements;
+    private string? loadError;
+    private string? userId;
+
+    private bool IsGlobalScope => scopes.FirstOrDefault(s => s.Id == formModel.ScopeId)?.Code == "GLOBAL";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var appUser = await UserManager.GetUserAsync(authState.User);
+        userId = appUser?.Id;
+
+        var permissions = await PermissionService.GetPermissionsAsync(authState.User);
+        canCreateAnnouncements = permissions.Announcements.Create;
+
+        await LoadLookupsAsync();
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            loadError = "Unable to determine current user.";
+        }
+        else
+        {
+            formModel.CreatedByUserId = userId;
+            formModel.IsActive = true;
+            formModel.PublishedAt = DateTime.UtcNow;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        var categoryResult = await LookupHandler.GetIssueCategoriesAsync();
+        if (categoryResult.IsSuccess && categoryResult.Data is not null)
+        {
+            categories.AddRange(categoryResult.Data);
+        }
+
+        var buildingResult = await LookupHandler.GetActiveBuildingsAsync();
+        if (buildingResult.IsSuccess && buildingResult.Data is not null)
+        {
+            buildings.AddRange(buildingResult.Data);
+            formModel.BuildingId = buildings.FirstOrDefault()?.Id;
+        }
+
+        var scopeResult = await LookupHandler.GetAnnouncementScopesAsync();
+        if (scopeResult.IsSuccess && scopeResult.Data is not null)
+        {
+            scopes.AddRange(scopeResult.Data);
+            formModel.ScopeId = scopes.FirstOrDefault()?.Id ?? 0;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (!canCreateAnnouncements || string.IsNullOrEmpty(userId))
+        {
+            return;
+        }
+
+        if (IsGlobalScope)
+        {
+            formModel.BuildingId = null;
+        }
+
+        isSaving = true;
+        var result = await AnnouncementHandler.CreateAnnouncementAsync(formModel);
+        isSaving = false;
+
+        if (!result.IsSuccess || result.Data is null)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Failed to create announcement.");
+            return;
+        }
+
+        ToastService.ShowSuccess("Announcement created.");
+        NavManager.NavigateTo($"/support/admin/announcements/{result.Data.Id}");
+    }
+
+    private void Cancel() => NavManager.NavigateTo("/support/admin/announcements");
+}
+

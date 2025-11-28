@@ -1,0 +1,421 @@
+@page "/support/admin/tickets"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject AuthenticationStateProvider AuthProvider
+@inject SupportTicketHandler TicketHandler
+@inject SupportLookupHandler LookupHandler
+@inject SupportPermissionService PermissionService
+@inject IdentityUserHandler<User> UserDirectoryHandler
+@inject ToastService ToastService
+@inject NavigationManager NavManager
+@inject UserManager<ApplicationUser> UserManager
+
+<Toast />
+
+<AccessLevelView MinimumAccessLevelName="Admin">
+    <PageTitle>Ticket Management</PageTitle>
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h1 class="mb-0">All Tickets</h1>
+        @if (canCreateTickets)
+        {
+            <AddNewButton Route="/support/admin/tickets/create" Label="ticket" ExtraStyleClass="btn-sm" />
+        }
+    </div>
+
+    @if (!canReadTickets)
+    {
+        <div class="alert alert-warning">
+            You do not have permission to view support tickets.
+        </div>
+    }
+    else if (isLoading)
+    {
+        <p>Loading tickets...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert alert-danger">@loadError</div>
+    }
+    else
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small text-muted">Building</label>
+                        <select class="form-select form-select-sm" @onchange="OnBuildingChanged" value="@selectedBuildingId">
+                            <option value="">All buildings</option>
+                            @foreach (var building in buildings)
+                            {
+                                <option value="@building.Id">@building.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small text-muted">Status</label>
+                        <select class="form-select form-select-sm" @onchange="OnStatusChanged" value="@selectedStatusCode">
+                            <option value="">All</option>
+                            @foreach (var status in statuses)
+                            {
+                                <option value="@status.Code">@status.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small text-muted">Priority</label>
+                        <select class="form-select form-select-sm" @onchange="OnPriorityChanged" value="@selectedPriorityCode">
+                            <option value="">All</option>
+                            @foreach (var priority in priorities)
+                            {
+                                <option value="@priority.Code">@priority.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small text-muted">Assignment</label>
+                        <select class="form-select form-select-sm" @onchange="OnAssignmentChanged" value="@assignmentFilter">
+                            <option value="all">All</option>
+                            <option value="me">Assigned to me</option>
+                            <option value="none">Unassigned</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small text-muted">Include archived</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" @bind="includeArchived" />
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small text-muted">Search</label>
+                        <input class="form-control form-control-sm"
+                               placeholder="Search title or description"
+                               @bind="searchTerm"
+                               @bind:event="oninput" />
+                    </div>
+                    <div class="col-12 col-md-6 d-flex align-items-end justify-content-end gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="ApplyFilters">Apply</button>
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="ResetFilters">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (!tickets.Any())
+        {
+            <p>No tickets found.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Building</th>
+                            <th>Created By</th>
+                            <th>Assigned To</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Created</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var ticket in tickets)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@ticket.Title</strong>
+                                </td>
+                                <td>@GetBuildingName(ticket.BuildingId)</td>
+                                <td>@GetUserDisplayName(ticket.CreatedByUserId)</td>
+                                <td>@GetUserDisplayName(ticket.AssignedToUserId)</td>
+                                <td>@GetStatusName(ticket.StatusId)</td>
+                                <td>@GetPriorityName(ticket.PriorityId)</td>
+                                <td>@ticket.CreatedAt.ToLocalTime():g</td>
+                                <td class="text-end">
+                                    <ViewButton Route="@($"/support/admin/tickets/{ticket.Id}")" ExtraStyleClass="btn-sm" DisplayTitle="true" />
+                                    @if (canDeleteTickets && !ticket.IsArchived)
+                                    {
+                                        <DeleteButton OnDelete="() => ConfirmArchive(ticket.Id)" ExtraStyleClass="btn-sm" DisplayTitle="true" />
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center gap-3 my-3">
+                <div>
+                    <label class="form-label me-2">Page size</label>
+                    <select class="form-select form-select-sm d-inline-block" style="width:auto"
+                            @onchange="OnPageSizeChanged" value="@pageSize">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+                <Pagination TotalItems="@totalCount"
+                            PageSize="@pageSize"
+                            CurrentPage="@currentPage"
+                            CurrentPageChanged="OnPageChanged"
+                            MaxVisiblePages="7" />
+            </div>
+        }
+    }
+
+    <ConfirmationModal IsVisible="@isArchiveModalVisible"
+                       Title="Archive ticket"
+                       ConfirmButtonText="Archive"
+                       ConfirmButtonClass="btn-danger"
+                       OnConfirm="ArchiveTicket"
+                       OnCancel="HideArchiveModal">
+        <p>Are you sure you want to archive this ticket? It will be hidden from active lists.</p>
+    </ConfirmationModal>
+</AccessLevelView>
+
+@code {
+    private readonly List<SupportTicket> tickets = new();
+    private readonly List<BuildingOption> buildings = new();
+    private readonly List<TicketStatus> statuses = new();
+    private readonly List<TicketPriority> priorities = new();
+    private readonly Dictionary<string, string> userNameCache = new();
+
+    private bool isLoading = true;
+    private string? loadError;
+    private string? userId;
+    private string? searchTerm;
+    private string? selectedStatusCode;
+    private string? selectedPriorityCode;
+    private string? assignmentFilter = "all";
+    private int? selectedBuildingId;
+    private bool includeArchived;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalCount;
+
+    private bool canReadTickets;
+    private bool canCreateTickets;
+    private bool canUpdateTickets;
+    private bool canDeleteTickets;
+
+    private bool isArchiveModalVisible;
+    private int archiveTicketId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var appUser = await UserManager.GetUserAsync(authState.User);
+        userId = appUser?.Id;
+
+        var permissions = await PermissionService.GetPermissionsAsync(authState.User);
+        canReadTickets = permissions.Tickets.Read;
+        canCreateTickets = permissions.Tickets.Create;
+        canUpdateTickets = permissions.Tickets.Update;
+        canDeleteTickets = permissions.Tickets.Delete;
+
+        await LoadLookupsAsync();
+        await LoadTicketsAsync();
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        var buildingResult = await LookupHandler.GetActiveBuildingsAsync();
+        if (buildingResult.IsSuccess && buildingResult.Data is not null)
+        {
+            buildings.Clear();
+            buildings.AddRange(buildingResult.Data.OrderBy(b => b.Name));
+        }
+
+        var statusResult = await LookupHandler.GetTicketStatusesAsync();
+        if (statusResult.IsSuccess && statusResult.Data is not null)
+        {
+            statuses.Clear();
+            statuses.AddRange(statusResult.Data);
+        }
+
+        var priorityResult = await LookupHandler.GetTicketPrioritiesAsync();
+        if (priorityResult.IsSuccess && priorityResult.Data is not null)
+        {
+            priorities.Clear();
+            priorities.AddRange(priorityResult.Data);
+        }
+
+        var usersResult = await UserDirectoryHandler.GetAll();
+        if (usersResult.IsSuccess && usersResult.Data is not null)
+        {
+            foreach (var user in usersResult.Data)
+            {
+                if (!string.IsNullOrEmpty(user.ID) && !userNameCache.ContainsKey(user.ID))
+                {
+                    userNameCache[user.ID] = user.UserName ?? user.Email ?? user.ID;
+                }
+            }
+        }
+    }
+
+    private async Task LoadTicketsAsync()
+    {
+        if (!canReadTickets)
+        {
+            return;
+        }
+
+        isLoading = true;
+        loadError = null;
+
+        var request = new TicketListRequest
+        {
+            BuildingId = selectedBuildingId,
+            StatusCode = string.IsNullOrWhiteSpace(selectedStatusCode) ? null : selectedStatusCode,
+            PriorityCode = string.IsNullOrWhiteSpace(selectedPriorityCode) ? null : selectedPriorityCode,
+            IncludeArchived = includeArchived,
+            Search = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
+            PageNumber = currentPage,
+            PageSize = pageSize
+        };
+
+        if (assignmentFilter == "me" && userId is not null)
+        {
+            request.AssignedToUserId = userId;
+        }
+        else if (assignmentFilter == "none")
+        {
+            request.AssignedToUserId = string.Empty;
+        }
+
+        var result = await TicketHandler.GetTicketsForBuildingAsync(request);
+        isLoading = false;
+
+        if (!result.IsSuccess || result.Data is null)
+        {
+            loadError = result.ErrorMessage ?? "Failed to load tickets.";
+            ToastService.ShowError(loadError);
+            return;
+        }
+
+        tickets.Clear();
+        tickets.AddRange(result.Data);
+        totalCount = tickets.FirstOrDefault()?.TotalCount ?? tickets.Count;
+    }
+
+    private async Task OnPageChanged(int newPage)
+    {
+        currentPage = newPage;
+        await LoadTicketsAsync();
+    }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var newSize) && newSize > 0)
+        {
+            pageSize = newSize;
+            currentPage = 1;
+            await LoadTicketsAsync();
+        }
+    }
+
+    private Task OnBuildingChanged(ChangeEventArgs e)
+    {
+        selectedBuildingId = int.TryParse(e.Value?.ToString(), out var value) ? value : null;
+        return Task.CompletedTask;
+    }
+
+    private Task OnStatusChanged(ChangeEventArgs e)
+    {
+        selectedStatusCode = e.Value?.ToString();
+        return Task.CompletedTask;
+    }
+
+    private Task OnPriorityChanged(ChangeEventArgs e)
+    {
+        selectedPriorityCode = e.Value?.ToString();
+        return Task.CompletedTask;
+    }
+
+    private Task OnAssignmentChanged(ChangeEventArgs e)
+    {
+        assignmentFilter = e.Value?.ToString() ?? "all";
+        return Task.CompletedTask;
+    }
+
+    private async Task ApplyFilters()
+    {
+        currentPage = 1;
+        await LoadTicketsAsync();
+    }
+
+    private async Task ResetFilters()
+    {
+        selectedBuildingId = null;
+        selectedPriorityCode = null;
+        selectedStatusCode = null;
+        assignmentFilter = "all";
+        includeArchived = false;
+        searchTerm = null;
+        currentPage = 1;
+        await LoadTicketsAsync();
+    }
+
+    private string GetStatusName(int id)
+        => statuses.FirstOrDefault(s => s.Id == id)?.Name ?? "-";
+
+    private string GetPriorityName(int id)
+        => priorities.FirstOrDefault(p => p.Id == id)?.Name ?? "-";
+
+    private string GetBuildingName(int id)
+        => buildings.FirstOrDefault(b => b.Id == id)?.Name ?? $"Building {id}";
+
+    private string GetUserDisplayName(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return "Unassigned";
+        }
+
+        if (userNameCache.TryGetValue(id, out var name))
+        {
+            return name;
+        }
+
+        return id;
+    }
+
+    private void ConfirmArchive(int ticketId)
+    {
+        archiveTicketId = ticketId;
+        isArchiveModalVisible = true;
+    }
+
+    private void HideArchiveModal()
+    {
+        isArchiveModalVisible = false;
+        archiveTicketId = 0;
+    }
+
+    private async Task ArchiveTicket()
+    {
+        if (archiveTicketId == 0)
+        {
+            return;
+        }
+
+        var result = await TicketHandler.ArchiveTicketAsync(new TicketArchiveRequest { Id = archiveTicketId });
+        if (!result.IsSuccess)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Failed to archive ticket.");
+        }
+        else
+        {
+            ToastService.ShowSuccess("Ticket archived.");
+            await LoadTicketsAsync();
+        }
+
+        HideArchiveModal();
+    }
+}
+

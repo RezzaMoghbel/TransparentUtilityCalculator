@@ -1,0 +1,617 @@
+@page "/support/admin/tickets/{id:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject AuthenticationStateProvider AuthProvider
+@inject SupportTicketHandler TicketHandler
+@inject SupportTicketMessageHandler MessageHandler
+@inject SupportAnnouncementHandler AnnouncementHandler
+@inject SupportLookupHandler LookupHandler
+@inject SupportPermissionService PermissionService
+@inject IdentityUserHandler<User> UserDirectoryHandler
+@inject ToastService ToastService
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavManager
+
+<Toast />
+
+<AccessLevelView MinimumAccessLevelName="Admin">
+    <PageTitle>Ticket Details (Admin)</PageTitle>
+
+    @if (isLoading)
+    {
+        <p>Loading ticket...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert alert-danger">@loadError</div>
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back</button>
+    }
+    else if (ticket is null)
+    {
+        <p>Ticket not found.</p>
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back</button>
+    }
+    else
+    {
+        <div class="row g-4">
+            <div class="col-12 col-xl-7">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <h1 class="h4 mb-0">@ticket.Title</h1>
+                            <div class="text-muted small">Created @ticket.CreatedAt.ToLocalTime():g</div>
+                        </div>
+                        <span class="badge bg-primary">@GetStatusName(ticket.StatusId)</span>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Building</dt>
+                            <dd class="col-sm-8">@GetBuildingName(ticket.BuildingId)</dd>
+
+                            <dt class="col-sm-4">Category</dt>
+                            <dd class="col-sm-8">@GetCategoryName(ticket.CategoryId)</dd>
+
+                            <dt class="col-sm-4">Priority</dt>
+                            <dd class="col-sm-8">@GetPriorityName(ticket.PriorityId)</dd>
+
+                            <dt class="col-sm-4">Created by</dt>
+                            <dd class="col-sm-8">@GetUserDisplayName(ticket.CreatedByUserId)</dd>
+
+                            <dt class="col-sm-4">Related user</dt>
+                            <dd class="col-sm-8">@GetUserDisplayName(ticket.RelatedUserId)</dd>
+
+                            <dt class="col-sm-4">Assigned admin</dt>
+                            <dd class="col-sm-8">@GetUserDisplayName(ticket.AssignedToUserId)</dd>
+                        </dl>
+                        <hr />
+                        <p style="white-space:pre-wrap;">@ticket.Description</p>
+                    </div>
+                    @if (ticket.AnnouncementId.HasValue)
+                    {
+                        <div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <span class="text-success">Linked announcement created.</span>
+                            <ViewButton Route="@($"/support/admin/announcements/{ticket.AnnouncementId.Value}")" ExtraStyleClass="btn-sm" DisplayTitle="true" />
+                        </div>
+                    }
+                </div>
+
+                @if (canUpdateTickets)
+                {
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="h5 mb-0">Update Ticket</h2>
+                        </div>
+                        <div class="card-body">
+                            <EditForm Model="@updateModel" OnValidSubmit="HandleTicketUpdate">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary class="text-danger" />
+
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label">Title</label>
+                                        <InputText class="form-control" @bind-Value="updateModel.Title" />
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label">Building</label>
+                                        <select class="form-select" @bind="updateModel.BuildingId">
+                                            @foreach (var building in buildings)
+                                            {
+                                                <option value="@building.Id">@building.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label">Status</label>
+                                        <select class="form-select" @bind="updateModel.StatusId">
+                                            @foreach (var status in statuses)
+                                            {
+                                                <option value="@status.Id">@status.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mt-1">
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label">Priority</label>
+                                        <select class="form-select" @bind="updateModel.PriorityId">
+                                            @foreach (var priority in priorities)
+                                            {
+                                                <option value="@priority.Id">@priority.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label">Category</label>
+                                        <select class="form-select" @bind="updateModel.CategoryId">
+                                            @foreach (var category in categories)
+                                            {
+                                                <option value="@category.Id">@category.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label">Assigned admin</label>
+                                        <select class="form-select" @bind="updateModel.AssignedToUserId">
+                                            <option value="">Unassigned</option>
+                                            @foreach (var admin in admins)
+                                            {
+                                                <option value="@admin.ID">@admin.UserName ?? admin.Email ?? admin.ID</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mt-1">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label">Related user</label>
+                                        <select class="form-select" @bind="updateModel.RelatedUserId">
+                                            <option value="">None</option>
+                                            @foreach (var tenant in tenants)
+                                            {
+                                                <option value="@tenant.ID">@tenant.UserName ?? tenant.Email ?? tenant.ID</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label">Resolve date (optional)</label>
+                                        <InputDate class="form-control" @bind-Value="updateModel.ResolvedAt" />
+                                    </div>
+                                </div>
+
+                                <div class="d-flex gap-2 flex-wrap mt-3">
+                                    <button class="btn btn-primary" type="submit" disabled="@isSavingTicket">
+                                        @(isSavingTicket ? "Saving..." : "Save changes")
+                                    </button>
+                                    @if (canUpdateTickets && userId is not null)
+                                    {
+                                        <button class="btn btn-outline-secondary" type="button" @onclick="AssignToMe">Assign to me</button>
+                                    }
+                                    @if (canDeleteTickets && !ticket.IsArchived)
+                                    {
+                                        <button class="btn btn-outline-danger" type="button" @onclick="ConfirmArchive">Archive</button>
+                                    }
+                                    @if (canCreateAnnouncements && !ticket.AnnouncementId.HasValue)
+                                    {
+                                        <button class="btn btn-outline-success" type="button" @onclick="ConfirmAnnouncementConversion">Convert to announcement</button>
+                                    }
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="col-12 col-xl-5">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h2 class="h5 mb-0">Conversation</h2>
+                        <span class="text-muted small">@messages.Count message(s)</span>
+                    </div>
+                    <div class="card-body">
+                        @if (!messages.Any())
+                        {
+                            <p class="text-muted">No updates yet.</p>
+                        }
+                        else
+                        {
+                            <div class="timeline">
+                                @foreach (var message in messages)
+                                {
+                                    <div class="timeline-item">
+                                        <div class="timeline-meta">
+                                            <strong>@GetAuthorName(message.CreatedByUserId)</strong>
+                                            <span class="text-muted small">@message.CreatedAt.ToLocalTime():g</span>
+                                            @if (message.IsInternal)
+                                            {
+                                                <span class="badge bg-warning text-dark ms-2">Internal</span>
+                                            }
+                                        </div>
+                                        <div class="timeline-body">
+                                            <p>@message.Body</p>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @if (canUpdateTickets)
+                {
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="h5 mb-0">Add update</h2>
+                        </div>
+                        <div class="card-body">
+                            <EditForm Model="@messageModel" OnValidSubmit="HandleMessageSubmit">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary class="text-danger" />
+                                <div class="mb-3">
+                                    <InputTextArea class="form-control" rows="4" @bind-Value="messageModel.Body" />
+                                    <ValidationMessage For="@(() => messageModel.Body)" />
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <InputCheckbox class="form-check-input" @bind-Value="messageModel.IsInternal" />
+                                    <label class="form-check-label">Internal note</label>
+                                </div>
+                                <button class="btn btn-primary" type="submit" disabled="@isPostingMessage">
+                                    @(isPostingMessage ? "Posting..." : "Post update")
+                                </button>
+                            </EditForm>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back to list</button>
+    }
+
+    <ConfirmationModal IsVisible="@isArchiveModalVisible"
+                       Title="Archive ticket"
+                       ConfirmButtonText="Archive"
+                       ConfirmButtonClass="btn-danger"
+                       OnConfirm="ArchiveTicket"
+                       OnCancel="HideArchiveModal">
+        <p>Are you sure you want to archive this ticket?</p>
+    </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@isConvertModalVisible"
+                       Title="Convert to announcement"
+                       ConfirmButtonText="Create announcement"
+                       ConfirmButtonClass="btn-success"
+                       OnConfirm="ConvertToAnnouncement"
+                       OnCancel="HideConvertModal">
+        <p>This will create a building announcement using the ticket details.</p>
+    </ConfirmationModal>
+</AccessLevelView>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private SupportTicket? ticket;
+    private readonly List<SupportTicketMessage> messages = new();
+    private readonly List<IssueCategory> categories = new();
+    private readonly List<TicketPriority> priorities = new();
+    private readonly List<TicketStatus> statuses = new();
+    private readonly List<BuildingOption> buildings = new();
+    private readonly List<User> admins = new();
+    private readonly List<User> tenants = new();
+    private readonly List<AnnouncementScope> scopes = new();
+    private readonly Dictionary<string, string> userNameCache = new();
+
+    private TicketUpdateRequest updateModel = new();
+    private TicketMessageCreateRequest messageModel = new();
+
+    private bool isLoading = true;
+    private bool isSavingTicket;
+    private bool isPostingMessage;
+    private bool isArchiveModalVisible;
+    private bool isConvertModalVisible;
+    private bool canUpdateTickets;
+    private bool canDeleteTickets;
+    private bool canCreateAnnouncements;
+
+    private string? loadError;
+    private string? userId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        await InitializeAsync();
+        isLoading = false;
+    }
+
+    private async Task InitializeAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var appUser = await UserManager.GetUserAsync(authState.User);
+        userId = appUser?.Id;
+
+        var permissions = await PermissionService.GetPermissionsAsync(authState.User);
+        canUpdateTickets = permissions.Tickets.Update;
+        canDeleteTickets = permissions.Tickets.Delete;
+        canCreateAnnouncements = permissions.Announcements.Create;
+
+        await LoadLookupsAsync();
+
+        var ticketResult = await TicketHandler.GetTicketByIdAsync(Id);
+        if (!ticketResult.IsSuccess || ticketResult.Data is null)
+        {
+            loadError = ticketResult.ErrorMessage ?? "Ticket not found.";
+            return;
+        }
+
+        ticket = ticketResult.Data;
+        PopulateUpdateModel();
+        await LoadMessagesAsync();
+    }
+
+    private void PopulateUpdateModel()
+    {
+        if (ticket is null)
+        {
+            return;
+        }
+
+        updateModel = new TicketUpdateRequest
+        {
+            Id = ticket.Id,
+            Title = ticket.Title,
+            Description = ticket.Description,
+            StatusId = ticket.StatusId,
+            PriorityId = ticket.PriorityId,
+            CategoryId = ticket.CategoryId,
+            AssignedToUserId = ticket.AssignedToUserId,
+            RelatedUserId = ticket.RelatedUserId,
+            BuildingId = ticket.BuildingId,
+            AnnouncementId = ticket.AnnouncementId,
+            ResolvedAt = ticket.ResolvedAt
+        };
+
+        messageModel = new TicketMessageCreateRequest
+        {
+            TicketId = ticket.Id,
+            CreatedByUserId = userId ?? string.Empty
+        };
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        var categoryResult = await LookupHandler.GetIssueCategoriesAsync();
+        if (categoryResult.IsSuccess && categoryResult.Data is not null)
+        {
+            categories.Clear();
+            categories.AddRange(categoryResult.Data);
+        }
+
+        var priorityResult = await LookupHandler.GetTicketPrioritiesAsync();
+        if (priorityResult.IsSuccess && priorityResult.Data is not null)
+        {
+            priorities.Clear();
+            priorities.AddRange(priorityResult.Data);
+        }
+
+        var statusResult = await LookupHandler.GetTicketStatusesAsync();
+        if (statusResult.IsSuccess && statusResult.Data is not null)
+        {
+            statuses.Clear();
+            statuses.AddRange(statusResult.Data);
+        }
+
+        var buildingResult = await LookupHandler.GetActiveBuildingsAsync();
+        if (buildingResult.IsSuccess && buildingResult.Data is not null)
+        {
+            buildings.Clear();
+            buildings.AddRange(buildingResult.Data);
+        }
+
+        var scopeResult = await LookupHandler.GetAnnouncementScopesAsync();
+        if (scopeResult.IsSuccess && scopeResult.Data is not null)
+        {
+            scopes.Clear();
+            scopes.AddRange(scopeResult.Data);
+        }
+
+        var usersResult = await UserDirectoryHandler.GetAll();
+        if (usersResult.IsSuccess && usersResult.Data is not null)
+        {
+            admins.Clear();
+            tenants.Clear();
+            foreach (var user in usersResult.Data)
+            {
+                if (!string.IsNullOrEmpty(user.ID))
+                {
+                    userNameCache[user.ID] = user.UserName ?? user.Email ?? user.ID;
+                }
+
+                if ((user.AccessLevelId ?? 1) >= 2)
+                {
+                    admins.Add(user);
+                }
+                else
+                {
+                    tenants.Add(user);
+                }
+            }
+        }
+    }
+
+    private async Task LoadMessagesAsync()
+    {
+        if (ticket is null)
+        {
+            return;
+        }
+
+        var result = await MessageHandler.GetMessagesAsync(new TicketMessageListRequest
+        {
+            TicketId = ticket.Id,
+            IncludeInternal = true
+        });
+
+        if (!result.IsSuccess || result.Data is null)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Unable to load messages.");
+            return;
+        }
+
+        messages.Clear();
+        messages.AddRange(result.Data);
+    }
+
+    private async Task HandleTicketUpdate()
+    {
+        if (!canUpdateTickets)
+        {
+            return;
+        }
+
+        isSavingTicket = true;
+        var result = await TicketHandler.UpdateTicketAsync(updateModel);
+        isSavingTicket = false;
+
+        if (!result.IsSuccess || result.Data is null)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Failed to update ticket.");
+            return;
+        }
+
+        ticket = result.Data;
+        PopulateUpdateModel();
+        ToastService.ShowSuccess("Ticket updated.");
+    }
+
+    private async Task HandleMessageSubmit()
+    {
+        if (!canUpdateTickets || string.IsNullOrWhiteSpace(messageModel.Body))
+        {
+            return;
+        }
+
+        isPostingMessage = true;
+        var result = await MessageHandler.CreateMessageAsync(messageModel);
+        isPostingMessage = false;
+
+        if (!result.IsSuccess)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Failed to add update.");
+            return;
+        }
+
+        messageModel.Body = string.Empty;
+        await LoadMessagesAsync();
+        ToastService.ShowSuccess("Update posted.");
+    }
+
+    private async Task AssignToMe()
+    {
+        if (!canUpdateTickets || string.IsNullOrEmpty(userId))
+        {
+            return;
+        }
+
+        updateModel.AssignedToUserId = userId;
+        await HandleTicketUpdate();
+    }
+
+    private void ConfirmArchive()
+    {
+        isArchiveModalVisible = true;
+    }
+
+    private void HideArchiveModal()
+    {
+        isArchiveModalVisible = false;
+    }
+
+    private async Task ArchiveTicket()
+    {
+        if (!canDeleteTickets || ticket is null)
+        {
+            HideArchiveModal();
+            return;
+        }
+
+        var result = await TicketHandler.ArchiveTicketAsync(new TicketArchiveRequest { Id = ticket.Id });
+        HideArchiveModal();
+
+        if (!result.IsSuccess)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Failed to archive ticket.");
+            return;
+        }
+
+        ToastService.ShowSuccess("Ticket archived.");
+        await InitializeAsync();
+    }
+
+    private void ConfirmAnnouncementConversion()
+    {
+        isConvertModalVisible = true;
+    }
+
+    private void HideConvertModal()
+    {
+        isConvertModalVisible = false;
+    }
+
+    private async Task ConvertToAnnouncement()
+    {
+        if (!canCreateAnnouncements || ticket is null || string.IsNullOrEmpty(userId))
+        {
+            HideConvertModal();
+            return;
+        }
+
+        var scope = scopes.FirstOrDefault(s => string.Equals(s.Code, "BUILDING", StringComparison.OrdinalIgnoreCase))
+                   ?? scopes.FirstOrDefault();
+        if (scope is null)
+        {
+            ToastService.ShowError("No announcement scope configured.");
+            HideConvertModal();
+            return;
+        }
+
+        var request = new AnnouncementCreateRequest
+        {
+            Title = ticket.Title,
+            Body = ticket.Description,
+            CategoryId = ticket.CategoryId,
+            ScopeId = scope.Id,
+            BuildingId = ticket.BuildingId,
+            SourceTicketId = ticket.Id,
+            CreatedByUserId = userId,
+            PublishedAt = DateTime.UtcNow,
+            IsActive = true
+        };
+
+        var result = await AnnouncementHandler.CreateAnnouncementAsync(request);
+        if (!result.IsSuccess || result.Data is null)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Failed to create announcement.");
+            HideConvertModal();
+            return;
+        }
+
+        updateModel.AnnouncementId = result.Data.Id;
+        await HandleTicketUpdate();
+        ToastService.ShowSuccess("Announcement created and linked.");
+        HideConvertModal();
+    }
+
+    private string GetCategoryName(int categoryId)
+        => categories.FirstOrDefault(c => c.Id == categoryId)?.Name ?? "-";
+
+    private string GetPriorityName(int priorityId)
+        => priorities.FirstOrDefault(p => p.Id == priorityId)?.Name ?? "-";
+
+    private string GetStatusName(int statusId)
+        => statuses.FirstOrDefault(s => s.Id == statusId)?.Name ?? "-";
+
+    private string GetBuildingName(int buildingId)
+        => buildings.FirstOrDefault(b => b.Id == buildingId)?.Name ?? $"Building {buildingId}";
+
+    private string GetUserDisplayName(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return "Unassigned";
+        }
+
+        if (userNameCache.TryGetValue(id, out var name))
+        {
+            return name;
+        }
+
+        return id;
+    }
+
+    private string GetAuthorName(string authorId)
+        => GetUserDisplayName(authorId);
+
+    private void GoBack() => NavManager.NavigateTo("/support/admin/tickets");
+}
+

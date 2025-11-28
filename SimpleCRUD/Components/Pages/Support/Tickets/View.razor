@@ -1,0 +1,305 @@
+@page "/support/my-tickets/{id:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject AuthenticationStateProvider AuthProvider
+@inject SupportTicketHandler TicketHandler
+@inject SupportTicketMessageHandler MessageHandler
+@inject SupportLookupHandler LookupHandler
+@inject SupportPermissionService PermissionService
+@inject ToastService ToastService
+@inject UserManager<ApplicationUser> UserManager
+@inject NavigationManager NavManager
+
+<Toast />
+
+<AccessLevelView>
+    <PageTitle>Ticket Details</PageTitle>
+
+    @if (isLoading)
+    {
+        <p>Loading ticket...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert alert-danger">
+            @loadError
+        </div>
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back</button>
+    }
+    else if (ticket is null)
+    {
+        <p>Ticket not found.</p>
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back</button>
+    }
+    else
+    {
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h4 mb-0">@ticket.Title</h2>
+                    <div class="text-muted small">Created @ticket.CreatedAt.ToLocalTime():g</div>
+                </div>
+                <span class="badge rounded-pill bg-primary">@GetStatusName(ticket.StatusId)</span>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">Priority</dt>
+                    <dd class="col-sm-9">@GetPriorityName(ticket.PriorityId)</dd>
+
+                    <dt class="col-sm-3">Category</dt>
+                    <dd class="col-sm-9">@GetCategoryName(ticket.CategoryId)</dd>
+
+                    <dt class="col-sm-3">Assigned admin</dt>
+                    <dd class="col-sm-9">@assignedDisplayName</dd>
+
+                    <dt class="col-sm-3">Description</dt>
+                    <dd class="col-sm-9" style="white-space:pre-wrap;">@ticket.Description</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="h5 mb-0">Conversation</h3>
+                <span class="text-muted small">@messages.Count message(s)</span>
+            </div>
+            <div class="card-body">
+                @if (!messages.Any())
+                {
+                    <p class="text-muted">No updates yet.</p>
+                }
+                else
+                {
+                    <div class="timeline">
+                        @foreach (var message in messages)
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-meta">
+                                    <strong>@GetAuthorName(message.CreatedByUserId)</strong>
+                                    <span class="text-muted small">@message.CreatedAt.ToLocalTime():g</span>
+                                </div>
+                                <div class="timeline-body">
+                                    <p>@message.Body</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (canPostMessages)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="h5 mb-0">Add an update</h3>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@messageModel" OnValidSubmit="HandleMessageSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+                        <div class="mb-3">
+                            <InputTextArea class="form-control" rows="4" @bind-Value="messageModel.Body" />
+                            <ValidationMessage For="@(() => messageModel.Body)" />
+                        </div>
+                        <button class="btn btn-primary" type="submit" disabled="@isPosting">
+                            @(isPosting ? "Sending..." : "Post update")
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back to tickets</button>
+    }
+</AccessLevelView>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private SupportTicket? ticket;
+    private readonly List<IssueCategory> categories = new();
+    private readonly List<TicketStatus> statuses = new();
+    private readonly List<TicketPriority> priorities = new();
+    private readonly List<SupportTicketMessage> messages = new();
+    private readonly Dictionary<string, string> userNameCache = new();
+
+    private TicketMessageCreateRequest messageModel = new();
+    private bool isLoading = true;
+    private bool isPosting;
+    private string? loadError;
+    private string? userId;
+    private string assignedDisplayName = "Unassigned";
+    private bool canPostMessages;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        await InitializeAsync();
+        isLoading = false;
+    }
+
+    private async Task InitializeAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var appUser = await UserManager.GetUserAsync(authState.User);
+        userId = appUser?.Id;
+
+        var permissionSet = await PermissionService.GetPermissionsAsync(authState.User);
+        canPostMessages = permissionSet.Tickets.Create;
+
+        await LoadLookupsAsync();
+
+        var ticketResult = await TicketHandler.GetTicketByIdAsync(Id);
+        if (!ticketResult.IsSuccess || ticketResult.Data is null)
+        {
+            loadError = ticketResult.ErrorMessage ?? "Ticket not found.";
+            ToastService.ShowError(loadError);
+            return;
+        }
+
+        ticket = ticketResult.Data;
+
+        if (userId is null || (ticket.CreatedByUserId != userId && ticket.RelatedUserId != userId))
+        {
+            loadError = "You are not allowed to view this ticket.";
+            ticket = null;
+            return;
+        }
+
+        messageModel = new TicketMessageCreateRequest
+        {
+            TicketId = ticket.Id,
+            CreatedByUserId = userId
+        };
+
+        if (!string.IsNullOrEmpty(ticket.AssignedToUserId))
+        {
+            assignedDisplayName = await GetDisplayNameAsync(ticket.AssignedToUserId) ?? "Assigned";
+        }
+
+        await LoadMessagesAsync();
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        var statusResult = await LookupHandler.GetTicketStatusesAsync();
+        if (statusResult.IsSuccess && statusResult.Data is not null)
+        {
+            statuses.Clear();
+            statuses.AddRange(statusResult.Data);
+        }
+
+        var priorityResult = await LookupHandler.GetTicketPrioritiesAsync();
+        if (priorityResult.IsSuccess && priorityResult.Data is not null)
+        {
+            priorities.Clear();
+            priorities.AddRange(priorityResult.Data);
+        }
+
+        var categoryResult = await LookupHandler.GetIssueCategoriesAsync();
+        if (categoryResult.IsSuccess && categoryResult.Data is not null)
+        {
+            categories.Clear();
+            categories.AddRange(categoryResult.Data);
+        }
+    }
+
+    private async Task LoadMessagesAsync()
+    {
+        if (ticket is null)
+        {
+            return;
+        }
+
+        var result = await MessageHandler.GetMessagesAsync(new TicketMessageListRequest
+        {
+            TicketId = ticket.Id,
+            IncludeInternal = false
+        });
+
+        if (!result.IsSuccess || result.Data is null)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Failed to load messages.");
+            return;
+        }
+
+        messages.Clear();
+        messages.AddRange(result.Data);
+    }
+
+    private async Task HandleMessageSubmit()
+    {
+        if (ticket is null || string.IsNullOrWhiteSpace(messageModel.Body))
+        {
+            return;
+        }
+
+        isPosting = true;
+        var result = await MessageHandler.CreateMessageAsync(messageModel);
+        isPosting = false;
+
+        if (!result.IsSuccess)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Unable to post message.");
+            return;
+        }
+
+        messageModel.Body = string.Empty;
+        await LoadMessagesAsync();
+        ToastService.ShowSuccess("Update posted.");
+    }
+
+    private string GetStatusName(int statusId)
+        => statuses.FirstOrDefault(s => s.Id == statusId)?.Name ?? "-";
+
+    private string GetPriorityName(int priorityId)
+        => priorities.FirstOrDefault(p => p.Id == priorityId)?.Name ?? "-";
+
+    private string GetCategoryName(int categoryId)
+        => categories.FirstOrDefault(c => c.Id == categoryId)?.Name ?? "-";
+
+    private string GetAuthorName(string authorId)
+    {
+        if (userId != null && string.Equals(authorId, userId, StringComparison.OrdinalIgnoreCase))
+        {
+            return "You";
+        }
+
+        if (userNameCache.TryGetValue(authorId, out var cached))
+        {
+            return cached;
+        }
+
+        return "Team";
+    }
+
+    private async Task<string?> GetDisplayNameAsync(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return null;
+        }
+
+        if (userNameCache.TryGetValue(id, out var cached))
+        {
+            return cached;
+        }
+
+        var user = await UserManager.FindByIdAsync(id);
+        if (user is not null)
+        {
+            var name = !string.IsNullOrWhiteSpace(user.UserName)
+                ? user.UserName!
+                : (!string.IsNullOrWhiteSpace(user.Email) ? user.Email! : id);
+            userNameCache[id] = name;
+            return name;
+        }
+
+        return null;
+    }
+
+    private void GoBack() => NavManager.NavigateTo("/support/my-tickets");
+}
+

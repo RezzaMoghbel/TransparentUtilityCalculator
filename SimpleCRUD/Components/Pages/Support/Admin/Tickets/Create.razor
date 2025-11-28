@@ -1,0 +1,243 @@
+@page "/support/admin/tickets/create"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject AuthenticationStateProvider AuthProvider
+@inject SupportTicketHandler TicketHandler
+@inject SupportLookupHandler LookupHandler
+@inject SupportPermissionService PermissionService
+@inject IdentityUserHandler<User> UserDirectoryHandler
+@inject ToastService ToastService
+@inject NavigationManager NavManager
+@inject UserManager<ApplicationUser> UserManager
+
+<Toast />
+
+<AccessLevelView MinimumAccessLevelName="Admin">
+    <PageTitle>Create Ticket (Admin)</PageTitle>
+
+    <h1 class="mb-3">Create Ticket</h1>
+
+    @if (!canCreateTickets)
+    {
+        <div class="alert alert-warning">
+            You do not have permission to create tickets.
+        </div>
+    }
+    else if (isLoading)
+    {
+        <p>Loading lookup data...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert alert-danger">@loadError</div>
+    }
+    else
+    {
+        <EditForm Model="@formModel" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="row g-3">
+                <div class="col-12 col-lg-6">
+                    <label class="form-label fw-semibold">Title</label>
+                    <InputText class="form-control" @bind-Value="formModel.Title" maxlength="200" />
+                    <ValidationMessage For="@(() => formModel.Title)" />
+                </div>
+                <div class="col-12 col-lg-6">
+                    <label class="form-label fw-semibold">Building</label>
+                    <select class="form-select" @bind="formModel.BuildingId">
+                        <option value="0">Select building</option>
+                        @foreach (var building in buildings)
+                        {
+                            <option value="@building.Id">@building.Name</option>
+                        }
+                    </select>
+                    <ValidationMessage For="@(() => formModel.BuildingId)" />
+                </div>
+            </div>
+
+            <div class="row g-3 mt-1">
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold">Status</label>
+                    <select class="form-select" @bind="formModel.StatusId">
+                        @foreach (var status in statuses)
+                        {
+                            <option value="@status.Id">@status.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold">Priority</label>
+                    <select class="form-select" @bind="formModel.PriorityId">
+                        @foreach (var priority in priorities)
+                        {
+                            <option value="@priority.Id">@priority.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold">Category</label>
+                    <select class="form-select" @bind="formModel.CategoryId">
+                        @foreach (var category in categories)
+                        {
+                            <option value="@category.Id">@category.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-1">
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold">Assign to admin</label>
+                    <select class="form-select" @bind="formModel.AssignedToUserId">
+                        <option value="">Unassigned</option>
+                        @foreach (var admin in admins)
+                        {
+                            <option value="@admin.ID">@admin.UserName ?? admin.Email ?? admin.ID</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-semibold">Related user (optional)</label>
+                    <select class="form-select" @bind="formModel.RelatedUserId">
+                        <option value="">None</option>
+                        @foreach (var user in tenants)
+                        {
+                            <option value="@user.ID">@user.UserName ?? user.Email ?? user.ID</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label fw-semibold">Description</label>
+                <InputTextArea class="form-control" rows="6" @bind-Value="formModel.Description" />
+                <ValidationMessage For="@(() => formModel.Description)" />
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap mt-4">
+                <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                    @(isSaving ? "Saving..." : "Create Ticket")
+                </button>
+                <button class="btn btn-outline-secondary" type="button" @onclick="Cancel">Cancel</button>
+            </div>
+        </EditForm>
+    }
+</AccessLevelView>
+
+@code {
+    private readonly List<IssueCategory> categories = new();
+    private readonly List<TicketPriority> priorities = new();
+    private readonly List<TicketStatus> statuses = new();
+    private readonly List<BuildingOption> buildings = new();
+    private readonly List<User> admins = new();
+    private readonly List<User> tenants = new();
+
+    private TicketCreateRequest formModel = new();
+    private bool isLoading = true;
+    private bool isSaving;
+    private bool canCreateTickets;
+    private string? loadError;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var appUser = await UserManager.GetUserAsync(authState.User);
+        userId = appUser?.Id;
+
+        var permissions = await PermissionService.GetPermissionsAsync(authState.User);
+        canCreateTickets = permissions.Tickets.Create;
+
+        await LoadLookupsAsync();
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            loadError = "Unable to determine current user.";
+        }
+        else
+        {
+            formModel.CreatedByUserId = userId;
+        }
+
+        isLoading = false;
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        var categoryResult = await LookupHandler.GetIssueCategoriesAsync();
+        if (categoryResult.IsSuccess && categoryResult.Data is not null)
+        {
+            categories.AddRange(categoryResult.Data);
+            formModel.CategoryId = categories.FirstOrDefault()?.Id ?? 0;
+        }
+
+        var priorityResult = await LookupHandler.GetTicketPrioritiesAsync();
+        if (priorityResult.IsSuccess && priorityResult.Data is not null)
+        {
+            priorities.AddRange(priorityResult.Data);
+            formModel.PriorityId = priorities.FirstOrDefault()?.Id ?? 0;
+        }
+
+        var statusResult = await LookupHandler.GetTicketStatusesAsync();
+        if (statusResult.IsSuccess && statusResult.Data is not null)
+        {
+            statuses.AddRange(statusResult.Data);
+            var openStatus = statuses.FirstOrDefault(s => string.Equals(s.Code, "OPEN", StringComparison.OrdinalIgnoreCase))
+                             ?? statuses.FirstOrDefault();
+            if (openStatus is not null)
+            {
+                formModel.StatusId = openStatus.Id;
+            }
+        }
+
+        var buildingResult = await LookupHandler.GetActiveBuildingsAsync();
+        if (buildingResult.IsSuccess && buildingResult.Data is not null)
+        {
+            buildings.AddRange(buildingResult.Data);
+            formModel.BuildingId = buildings.FirstOrDefault()?.Id ?? 0;
+        }
+
+        var usersResult = await UserDirectoryHandler.GetAll();
+        if (usersResult.IsSuccess && usersResult.Data is not null)
+        {
+            foreach (var user in usersResult.Data)
+            {
+                if (user.AccessLevelId >= 2)
+                {
+                    admins.Add(user);
+                }
+                else
+                {
+                    tenants.Add(user);
+                }
+            }
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            ToastService.ShowError("Unable to determine current user.");
+            return;
+        }
+
+        isSaving = true;
+        var result = await TicketHandler.CreateTicketAsync(formModel);
+        isSaving = false;
+
+        if (!result.IsSuccess || result.Data is null)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Failed to create ticket.");
+            return;
+        }
+
+        ToastService.ShowSuccess("Ticket created.");
+        NavManager.NavigateTo($"/support/admin/tickets/{result.Data.Id}");
+    }
+
+    private void Cancel() => NavManager.NavigateTo("/support/admin/tickets");
+}
+

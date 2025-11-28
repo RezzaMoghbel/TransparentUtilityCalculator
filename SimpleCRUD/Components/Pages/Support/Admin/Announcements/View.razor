@@ -1,0 +1,214 @@
+@page "/support/admin/announcements/{id:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject SupportAnnouncementHandler AnnouncementHandler
+@inject SupportPermissionService PermissionService
+@inject ToastService ToastService
+@inject NavigationManager NavManager
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthProvider
+
+<Toast />
+
+<AccessLevelView MinimumAccessLevelName="Admin">
+    <PageTitle>Announcement Details</PageTitle>
+
+    @if (isLoading)
+    {
+        <p>Loading announcement...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert alert-danger">@loadError</div>
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back</button>
+    }
+    else if (announcement is null)
+    {
+        <p>Announcement not found.</p>
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back</button>
+    }
+    else
+    {
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                    <h1 class="h4 mb-1">@announcement.Title</h1>
+                    <div class="text-muted small">Published @announcement.PublishedAt?.ToLocalTime():g</div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    @if (canUpdateAnnouncements)
+                    {
+                        <EditButton Route="@($"/support/admin/announcements/edit/{announcement.Id}")" ExtraStyleClass="btn-sm" DisplayTitle="true" />
+                    }
+                    @if (canDeleteAnnouncements)
+                    {
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="ToggleArchive">
+                            @(announcement.IsArchived ? "Restore" : "Archive")
+                        </button>
+                    }
+                </div>
+            </div>
+            <div class="card-body">
+                <p style="white-space:pre-wrap;">@announcement.Body</p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="h5 mb-0">Updates</h2>
+                <span class="text-muted small">@updates.Count update(s)</span>
+            </div>
+            <div class="card-body">
+                @if (!updates.Any())
+                {
+                    <p class="text-muted">No updates recorded.</p>
+                }
+                else
+                {
+                    <ul class="list-unstyled">
+                        @foreach (var update in updates)
+                        {
+                            <li class="mb-3">
+                                <div class="fw-semibold">@update.CreatedAt.ToLocalTime():g</div>
+                                <div style="white-space:pre-wrap;">@update.Body</div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+
+        @if (canUpdateAnnouncements)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="h5 mb-0">Add Update</h2>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@updateModel" OnValidSubmit="HandleUpdateSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+                        <div class="mb-3">
+                            <InputTextArea class="form-control" rows="4" @bind-Value="updateModel.Body" />
+                            <ValidationMessage For="@(() => updateModel.Body)" />
+                        </div>
+                        <button class="btn btn-primary" type="submit" disabled="@isPostingUpdate">
+                            @(isPostingUpdate ? "Posting..." : "Post update")
+                        </button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back to list</button>
+    }
+</AccessLevelView>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private SupportAnnouncement? announcement;
+    private readonly List<SupportAnnouncementUpdate> updates = new();
+    private AnnouncementUpdateCreateRequest updateModel = new();
+    private bool canUpdateAnnouncements;
+    private bool canDeleteAnnouncements;
+    private bool isLoading = true;
+    private bool isPostingUpdate;
+    private string? loadError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        isLoading = true;
+        await InitializeAsync();
+        isLoading = false;
+    }
+
+    private async Task InitializeAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var currentUser = await UserManager.GetUserAsync(authState.User);
+        var permissions = await PermissionService.GetPermissionsAsync(authState.User);
+        canUpdateAnnouncements = permissions.Announcements.Update;
+        canDeleteAnnouncements = permissions.Announcements.Delete;
+
+        var announcementResult = await AnnouncementHandler.GetAnnouncementByIdAsync(Id);
+        if (!announcementResult.IsSuccess || announcementResult.Data is null)
+        {
+            loadError = announcementResult.ErrorMessage ?? "Announcement not found.";
+            return;
+        }
+
+        announcement = announcementResult.Data;
+
+        var updateResult = await AnnouncementHandler.GetUpdatesAsync(Id);
+        if (updateResult.IsSuccess && updateResult.Data is not null)
+        {
+            updates.Clear();
+            updates.AddRange(updateResult.Data);
+        }
+
+        updateModel = new AnnouncementUpdateCreateRequest
+        {
+            AnnouncementId = Id,
+            CreatedByUserId = currentUser?.Id ?? string.Empty
+        };
+    }
+
+    private async Task HandleUpdateSubmit()
+    {
+        if (!canUpdateAnnouncements || string.IsNullOrWhiteSpace(updateModel.CreatedByUserId))
+        {
+            return;
+        }
+
+        isPostingUpdate = true;
+        var result = await AnnouncementHandler.CreateUpdateAsync(updateModel);
+        isPostingUpdate = false;
+
+        if (!result.IsSuccess)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Failed to add update.");
+            return;
+        }
+
+        updateModel.Body = string.Empty;
+        await InitializeAsync();
+        ToastService.ShowSuccess("Update added.");
+    }
+
+    private async Task ToggleArchive()
+    {
+        if (!canDeleteAnnouncements || announcement is null)
+        {
+            return;
+        }
+
+        var updateRequest = new AnnouncementUpdateRequest
+        {
+            Id = announcement.Id,
+            Title = announcement.Title,
+            Body = announcement.Body,
+            CategoryId = announcement.CategoryId,
+            ScopeId = announcement.ScopeId,
+            BuildingId = announcement.BuildingId,
+            SourceTicketId = announcement.SourceTicketId,
+            IsActive = announcement.IsActive,
+            IsArchived = !announcement.IsArchived,
+            PublishedAt = announcement.PublishedAt
+        };
+
+        var result = await AnnouncementHandler.UpdateAnnouncementAsync(updateRequest);
+        if (!result.IsSuccess)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Failed to update announcement.");
+            return;
+        }
+
+        ToastService.ShowSuccess(announcement.IsArchived ? "Announcement restored." : "Announcement archived.");
+        await InitializeAsync();
+    }
+
+    private void GoBack() => NavManager.NavigateTo("/support/admin/announcements");
+}
+

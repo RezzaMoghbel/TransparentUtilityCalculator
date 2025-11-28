@@ -1,0 +1,362 @@
+@page "/support/admin/announcements"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@inject AuthenticationStateProvider AuthProvider
+@inject SupportAnnouncementHandler AnnouncementHandler
+@inject SupportLookupHandler LookupHandler
+@inject SupportPermissionService PermissionService
+@inject ToastService ToastService
+@inject NavigationManager NavManager
+
+<Toast />
+
+<AccessLevelView MinimumAccessLevelName="Admin">
+    <PageTitle>Announcements Management</PageTitle>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h1 class="mb-0">Announcements</h1>
+        @if (canCreateAnnouncements)
+        {
+            <AddNewButton Route="/support/admin/announcements/create" Label="announcement" ExtraStyleClass="btn-sm" />
+        }
+    </div>
+
+    @if (!canReadAnnouncements)
+    {
+        <div class="alert alert-warning">You do not have permission to view announcements.</div>
+    }
+    else if (isLoading)
+    {
+        <p>Loading announcements...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert alert-danger">@loadError</div>
+    }
+    else
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small text-muted">Scope</label>
+                        <select class="form-select form-select-sm" @onchange="OnScopeChanged" value="@selectedScopeCode">
+                            <option value="">All</option>
+                            @foreach (var scope in scopes)
+                            {
+                                <option value="@scope.Code">@scope.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small text-muted">Building</label>
+                        <select class="form-select form-select-sm" @onchange="OnBuildingChanged" value="@selectedBuildingId">
+                            <option value="">All</option>
+                            @foreach (var building in buildings)
+                            {
+                                <option value="@building.Id">@building.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label small text-muted">Category</label>
+                        <select class="form-select form-select-sm" @onchange="OnCategoryChanged" value="@selectedCategoryCode">
+                            <option value="">All</option>
+                            @foreach (var category in categories)
+                            {
+                                <option value="@category.Code">@category.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3 d-flex align-items-center">
+                        <div class="form-check form-switch me-3">
+                            <input class="form-check-input" type="checkbox" @bind="includeArchived" />
+                            <label class="form-check-label small text-muted">Include archived</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" @bind="showInactive" />
+                            <label class="form-check-label small text-muted">Show inactive</label>
+                        </div>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="ApplyFilters">Apply</button>
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="ResetFilters">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (!announcements.Any())
+        {
+            <p>No announcements found.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Scope</th>
+                            <th>Building</th>
+                            <th>Category</th>
+                            <th>Published</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var announcement in announcements)
+                        {
+                            <tr>
+                                <td>@announcement.Title</td>
+                                <td>@GetScopeName(announcement.ScopeId)</td>
+                                <td>@GetBuildingName(announcement.BuildingId)</td>
+                                <td>@GetCategoryName(announcement.CategoryId)</td>
+                                <td>@announcement.PublishedAt?.ToLocalTime():g</td>
+                                <td>
+                                    @if (announcement.IsArchived)
+                                    {
+                                        <span class="badge bg-secondary">Archived</span>
+                                    }
+                                    else if (!announcement.IsActive)
+                                    {
+                                        <span class="badge bg-warning text-dark">Inactive</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <ViewButton Route="@($"/support/admin/announcements/{announcement.Id}")" ExtraStyleClass="btn-sm" DisplayTitle="true" />
+                                    @if (canUpdateAnnouncements)
+                                    {
+                                        <EditButton Route="@($"/support/admin/announcements/edit/{announcement.Id}")" ExtraStyleClass="btn-sm" DisplayTitle="true" />
+                                    }
+                                    @if (canDeleteAnnouncements)
+                                    {
+                                        <button class="btn btn-outline-secondary btn-sm" @onclick="() => ToggleArchive(announcement)">
+                                            @(announcement.IsArchived ? "Restore" : "Archive")
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center gap-3 my-3">
+                <div>
+                    <label class="form-label me-2">Page size</label>
+                    <select class="form-select form-select-sm d-inline-block" style="width:auto"
+                            @onchange="OnPageSizeChanged" value="@pageSize">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                    </select>
+                </div>
+                <Pagination TotalItems="@totalCount"
+                            PageSize="@pageSize"
+                            CurrentPage="@currentPage"
+                            CurrentPageChanged="OnPageChanged"
+                            MaxVisiblePages="7" />
+            </div>
+        }
+    }
+</AccessLevelView>
+
+@code {
+    private readonly List<SupportAnnouncement> announcements = new();
+    private readonly List<IssueCategory> categories = new();
+    private readonly List<BuildingOption> buildings = new();
+    private readonly List<AnnouncementScope> scopes = new();
+
+    private bool isLoading = true;
+    private string? loadError;
+    private string? selectedScopeCode;
+    private string? selectedCategoryCode;
+    private int? selectedBuildingId;
+    private bool includeArchived;
+    private bool showInactive;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalCount;
+
+    private bool canReadAnnouncements;
+    private bool canCreateAnnouncements;
+    private bool canUpdateAnnouncements;
+    private bool canDeleteAnnouncements;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var permissions = await PermissionService.GetPermissionsAsync(authState.User);
+        canReadAnnouncements = permissions.Announcements.Read;
+        canCreateAnnouncements = permissions.Announcements.Create;
+        canUpdateAnnouncements = permissions.Announcements.Update;
+        canDeleteAnnouncements = permissions.Announcements.Delete;
+
+        await LoadLookupsAsync();
+        await LoadAnnouncementsAsync();
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        var categoryResult = await LookupHandler.GetIssueCategoriesAsync();
+        if (categoryResult.IsSuccess && categoryResult.Data is not null)
+        {
+            categories.AddRange(categoryResult.Data);
+        }
+
+        var buildingResult = await LookupHandler.GetActiveBuildingsAsync();
+        if (buildingResult.IsSuccess && buildingResult.Data is not null)
+        {
+            buildings.AddRange(buildingResult.Data);
+        }
+
+        var scopeResult = await LookupHandler.GetAnnouncementScopesAsync();
+        if (scopeResult.IsSuccess && scopeResult.Data is not null)
+        {
+            scopes.AddRange(scopeResult.Data);
+        }
+    }
+
+    private async Task LoadAnnouncementsAsync()
+    {
+        if (!canReadAnnouncements)
+        {
+            return;
+        }
+
+        isLoading = true;
+        loadError = null;
+
+        var request = new AnnouncementListRequest
+        {
+            BuildingId = selectedBuildingId,
+            ScopeCode = string.IsNullOrWhiteSpace(selectedScopeCode) ? null : selectedScopeCode,
+            CategoryCode = string.IsNullOrWhiteSpace(selectedCategoryCode) ? null : selectedCategoryCode,
+            IncludeArchived = includeArchived,
+            IsActive = showInactive ? null : true,
+            PageNumber = currentPage,
+            PageSize = pageSize
+        };
+
+        var result = await AnnouncementHandler.GetAnnouncementsAsync(request);
+        isLoading = false;
+
+        if (!result.IsSuccess || result.Data is null)
+        {
+            loadError = result.ErrorMessage ?? "Failed to load announcements.";
+            ToastService.ShowError(loadError);
+            return;
+        }
+
+        announcements.Clear();
+        announcements.AddRange(result.Data);
+        totalCount = announcements.FirstOrDefault()?.TotalCount ?? announcements.Count;
+    }
+
+    private async Task OnPageChanged(int newPage)
+    {
+        currentPage = newPage;
+        await LoadAnnouncementsAsync();
+    }
+
+    private async Task OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var newSize) && newSize > 0)
+        {
+            pageSize = newSize;
+            currentPage = 1;
+            await LoadAnnouncementsAsync();
+        }
+    }
+
+    private Task OnScopeChanged(ChangeEventArgs e)
+    {
+        selectedScopeCode = e.Value?.ToString();
+        return Task.CompletedTask;
+    }
+
+    private Task OnBuildingChanged(ChangeEventArgs e)
+    {
+        selectedBuildingId = int.TryParse(e.Value?.ToString(), out var value) ? value : null;
+        return Task.CompletedTask;
+    }
+
+    private Task OnCategoryChanged(ChangeEventArgs e)
+    {
+        selectedCategoryCode = e.Value?.ToString();
+        return Task.CompletedTask;
+    }
+
+    private async Task ApplyFilters()
+    {
+        currentPage = 1;
+        await LoadAnnouncementsAsync();
+    }
+
+    private async Task ResetFilters()
+    {
+        selectedScopeCode = null;
+        selectedBuildingId = null;
+        selectedCategoryCode = null;
+        includeArchived = false;
+        showInactive = false;
+        currentPage = 1;
+        await LoadAnnouncementsAsync();
+    }
+
+    private string GetScopeName(int scopeId)
+        => scopes.FirstOrDefault(s => s.Id == scopeId)?.Name ?? "-";
+
+    private string GetBuildingName(int? buildingId)
+    {
+        if (!buildingId.HasValue)
+        {
+            return "Global";
+        }
+
+        return buildings.FirstOrDefault(b => b.Id == buildingId.Value)?.Name ?? $"Building {buildingId.Value}";
+    }
+
+    private string GetCategoryName(int? categoryId)
+        => categories.FirstOrDefault(c => c.Id == categoryId)?.Name ?? "General";
+
+    private async Task ToggleArchive(SupportAnnouncement announcement)
+    {
+        if (!canDeleteAnnouncements)
+        {
+            return;
+        }
+
+        var update = new AnnouncementUpdateRequest
+        {
+            Id = announcement.Id,
+            Title = announcement.Title,
+            Body = announcement.Body,
+            CategoryId = announcement.CategoryId,
+            ScopeId = announcement.ScopeId,
+            BuildingId = announcement.BuildingId,
+            SourceTicketId = announcement.SourceTicketId,
+            IsActive = announcement.IsActive,
+            IsArchived = !announcement.IsArchived,
+            PublishedAt = announcement.PublishedAt
+        };
+
+        var result = await AnnouncementHandler.UpdateAnnouncementAsync(update);
+        if (!result.IsSuccess)
+        {
+            ToastService.ShowError(result.ErrorMessage ?? "Failed to update announcement.");
+            return;
+        }
+
+        ToastService.ShowSuccess(announcement.IsArchived ? "Announcement restored." : "Announcement archived.");
+        await LoadAnnouncementsAsync();
+    }
+}
+
