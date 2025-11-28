@@ -85,9 +85,9 @@ var envName = builder.Environment.EnvironmentName;
 // Set connection string based on environment
 string connectionString = envName.ToLowerInvariant() switch
 {
-    "development" => "Server=HELLODIGI;Database=UtilityCalculator;User Id=UtilityCalculator;Password=0098611Roya;MultipleActiveResultSets=true;TrustServerCertificate=True",
-    "staging" => "Server=WIN-AEIFAQC5IFS\\SQLEXPRESS;Database=UtilityCalculatorLive;User Id=UtilityCalculatorUser;Password=0098611Roya;MultipleActiveResultSets=true;TrustServerCertificate=True",
-    "production" => "Server=WIN-AEIFAQC5IFS\\SQLEXPRESS;Database=UtilityCalculatorLive;User Id=UtilityCalculatorLive;Password=0098611Roya;MultipleActiveResultSets=true;TrustServerCertificate=True",
+    "development" => "Server=DEV-SERVER;Database=DevDatabase;User Id=DevUser;Password=DUMMY_PASSWORD;MultipleActiveResultSets=true;TrustServerCertificate=True",
+    "staging" => "Server=STAGING-SERVER\\SQLEXPRESS;Database=StagingDatabase;User Id=StagingUser;Password=DUMMY_PASSWORD;MultipleActiveResultSets=true;TrustServerCertificate=True",
+    "production" => "Server=PROD-SERVER\\SQLEXPRESS;Database=ProdDatabase;User Id=ProdUser;Password=DUMMY_PASSWORD;MultipleActiveResultSets=true;TrustServerCertificate=True",
     _ => throw new InvalidOperationException($"Unknown environment: {envName}")
 };
 
