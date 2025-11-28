@@ -64,6 +64,10 @@
     <Folder Include="dbo\Stored Procedures\" />
     <Folder Include="identity\" />
     <Folder Include="identity\Stored Procedures\" />
+    <Folder Include="support\" />
+    <Folder Include="support\Scripts\" />
+    <Folder Include="support\Tables\" />
+    <Folder Include="support\Stored Procedures\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\UtilityProviders.sql" />
@@ -118,10 +122,28 @@
     <Build Include="utility\Stored Procedures\DirectDebitReadings_Link.sql" />
     <Build Include="utility\Stored Procedures\DirectDebitReadings_GetByReading.sql" />
     <Build Include="utility\Stored Procedures\DirectDebitReadings_GetByDirectDebit.sql" />
-    <Build Include="dbo\Stored Procedures\UtilityProviders_GetAllActive_1.sql" />
+    <Build Include="support\Tables\AnnouncementUpdate.sql" />
+    <Build Include="support\Tables\Announcement.sql" />
+    <Build Include="support\Tables\TicketMessage.sql" />
+    <Build Include="support\Tables\Ticket.sql" />
+    <Build Include="support\Tables\AnnouncementScope.sql" />
+    <Build Include="support\Tables\TicketPriority.sql" />
+    <Build Include="support\Tables\TicketStatus.sql" />
+    <Build Include="support\Tables\IssueCategory.sql" />
+    <Build Include="Security\support.sql" />
+    <Build Include="dbo\Stored Procedures\UtilityProviders_GetAllActive.sql" />
+    <Build Include="support\Stored Procedures\IssueCategory.sql" />
+    <Build Include="support\Stored Procedures\TicketStatus.sql" />
+    <Build Include="support\Stored Procedures\TicketPriority.sql" />
+    <Build Include="support\Stored Procedures\AnnouncementScope.sql" />
+    <Build Include="support\Stored Procedures\Ticket.sql" />
+    <Build Include="support\Stored Procedures\TicketMessage.sql" />
+    <Build Include="support\Stored Procedures\Announcement.sql" />
+    <Build Include="support\Stored Procedures\AnnouncementUpdate.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="utility\Scripts\Script.PostDeployment.UtilityType.sql" />
     <None Include="utility\Scripts\Script.PostDeploymentUtilityTypeAdv.sql" />
+    <None Include="support\Scripts\AddSupportSchema.sql" />
   </ItemGroup>
 </Project>

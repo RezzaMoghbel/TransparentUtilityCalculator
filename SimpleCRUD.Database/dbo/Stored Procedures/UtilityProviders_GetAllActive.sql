@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[UtilityProviders_GetAllActive]
+﻿CREATE PROCEDURE [dbo].[UtilityProviders_GetAllActive]
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -23,4 +23,3 @@ BEGIN
             ERROR_MESSAGE()   AS ErrorMessage;
     END CATCH
 END
-
