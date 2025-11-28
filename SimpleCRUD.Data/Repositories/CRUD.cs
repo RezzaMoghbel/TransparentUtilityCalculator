@@ -5,6 +5,7 @@ using System.Data;
 using System.Reflection;
 using SimpleCRUD.Data.Infrastructure;
 using SimpleCRUD.DTO.Identity; // you had this in your usings
+using System.Data.Common;
 
 namespace SimpleCRUD.Data.Repositories
 {
@@ -34,11 +35,23 @@ namespace SimpleCRUD.Data.Repositories
             try
             {
                 using var conn = _connFactory.Create();
-                // Dapper will open the connection if closed;
-                // Can also do: await ((SqlConnection)conn).OpenAsync();
+                
+                // Use DynamicParameters to have explicit control over which parameters are sent
+                // This prevents Dapper from including unexpected properties
+                var dynamicParams = new DynamicParameters();
+                if (parameters != null)
+                {
+                    var props = parameters.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                    foreach (var prop in props)
+                    {
+                        var value = prop.GetValue(parameters);
+                        dynamicParams.Add(prop.Name, value);
+                    }
+                }
+                
                 var result = (await conn.QueryAsync<TResult>(
                     procedureName,
-                    param: parameters,
+                    param: dynamicParams,
                     commandType: CommandType.StoredProcedure)).ToList();
 
                 // Preserve your error contract check
