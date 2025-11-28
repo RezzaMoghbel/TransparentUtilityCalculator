@@ -19,7 +19,7 @@
 <!--Inject your handlers -->
 @inject IdentityUserHandler<string> IdentityUserHandler
 @inject DirectDebitHandler<DirectDebitCreate> DirectDebitCreateHandler
-@inject DirectDebitHandler<UtilityProvider> ProvidersHandler
+@inject DirectDebitHandler<SimpleCRUD.DTO.Identity.UtilityProvider> ProvidersHandler
 
 @rendermode InteractiveServer
 
@@ -167,8 +167,8 @@
 
 @code {
     private DirectDebitCreate ddCreate = new();
-    private Result<IEnumerable<UtilityProvider>>? providersResult;
-    private List<UtilityProvider> Providers = new();
+    private Result<IEnumerable<SimpleCRUD.DTO.Identity.UtilityProvider>>? providersResult;
+    private List<SimpleCRUD.DTO.Identity.UtilityProvider> Providers = new();
     private bool isLoading = true;
     private string? loadError;
     private string? userName;

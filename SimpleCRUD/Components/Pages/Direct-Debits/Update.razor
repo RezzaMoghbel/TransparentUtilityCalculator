@@ -20,7 +20,7 @@
 @inject IdentityUserHandler<string> IdentityUserHandler
 @inject DirectDebitHandler<DirectDebit> DirectDebitReadHandler
 @inject DirectDebitHandler<DirectDebitUpdate> DirectDebitUpdateHandler
-@inject DirectDebitHandler<UtilityProvider> ProvidersHandler
+@inject DirectDebitHandler<SimpleCRUD.DTO.Identity.UtilityProvider> ProvidersHandler
 
 <style>
     /* mobile-friendly tweaks */
@@ -214,8 +214,8 @@
 
     private DirectDebitUpdate ddUpdate = new();
     private DirectDebitUpdate originalValues = new();
-    private Result<IEnumerable<UtilityProvider>>? providersResult;
-    private List<UtilityProvider> Providers = new();
+    private Result<IEnumerable<SimpleCRUD.DTO.Identity.UtilityProvider>>? providersResult;
+    private List<SimpleCRUD.DTO.Identity.UtilityProvider> Providers = new();
     private bool isLoading = true;
     private string? loadError;
     private string? userID;
