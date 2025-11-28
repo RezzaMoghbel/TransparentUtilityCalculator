@@ -4,6 +4,8 @@
 @using System.Text.RegularExpressions
 @inject NavigationManager NavigationManager
 @inject IWebHostEnvironment HostEnv
+@inject AuthenticationStateProvider AuthProvider
+@inject SupportPermissionService PermissionService
 
 <div class="nav-item px-3">
     <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">
@@ -23,6 +25,34 @@
     </NavLink>
 </div>
 
+@if (showUserSupportLinks)
+{
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="/support/my-tickets">
+            <span class="bi bi-life-preserver" aria-hidden="true"></span> My Tickets
+        </NavLink>
+    </div>
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="/support/announcements">
+            <span class="bi bi-megaphone" aria-hidden="true"></span> Announcements
+        </NavLink>
+    </div>
+}
+
+@if (showAdminSupportLinks)
+{
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="/support/admin/tickets">
+            <span class="bi bi-people" aria-hidden="true"></span> Manage Tickets
+        </NavLink>
+    </div>
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="/support/admin/announcements">
+            <span class="bi bi-broadcast-pin" aria-hidden="true"></span> Manage Announcements
+        </NavLink>
+    </div>
+}
+
 <div class="nav-item px-3">
     <span class="text-white ms-2" style="font-size:.72rem; letter-spacing:.02em;">@appVersion (@environmentName)</span>
 </div>
@@ -33,8 +63,10 @@
 
     private string environmentName = "";
     private string appVersion = "";
+    private bool showUserSupportLinks;
+    private bool showAdminSupportLinks;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         environmentName = HostEnv.EnvironmentName;
 
@@ -52,5 +84,11 @@
             // fallback to assembly version (limit to 3 parts if present)
             appVersion = "v" + asm?.GetName().Version?.ToString(3) ?? "0.0.0";
         }
+
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        var permissions = await PermissionService.GetPermissionsAsync(authState.User);
+
+        showUserSupportLinks = permissions.Tickets.Read || permissions.Announcements.Read;
+        showAdminSupportLinks = permissions.Tickets.Update || permissions.Announcements.Update || permissions.Tickets.Delete || permissions.Announcements.Delete || permissions.Announcements.Create;
     }
 }
