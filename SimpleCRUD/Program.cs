@@ -85,9 +85,9 @@ var envName = builder.Environment.EnvironmentName;
 // Set connection string based on environment
 string connectionString = envName.ToLowerInvariant() switch
 {
-    "development" => "Server=DEV-SERVER;Database=DevDatabase;User Id=DevUser;Password=DUMMY_PASSWORD;MultipleActiveResultSets=true;TrustServerCertificate=True",
-    "staging" => "Server=STAGING-SERVER\\SQLEXPRESS;Database=StagingDatabase;User Id=StagingUser;Password=DUMMY_PASSWORD;MultipleActiveResultSets=true;TrustServerCertificate=True",
-    "production" => "Server=PROD-SERVER\\SQLEXPRESS;Database=ProdDatabase;User Id=ProdUser;Password=DUMMY_PASSWORD;MultipleActiveResultSets=true;TrustServerCertificate=True",
+    "development" => "Server=HELLODIGI;Database=UtilityCalculator;User Id=UtilityCalculator;Password=0098611Roya;MultipleActiveResultSets=true;TrustServerCertificate=True",
+    "staging" => "Server=WIN-AEIFAQC5IFS\\SQLEXPRESS;Database=UtilityCalculatorLive;User Id=UtilityCalculatorUser;Password=0098611Roya;MultipleActiveResultSets=true;TrustServerCertificate=True",
+    "production" => "Server=WIN-AEIFAQC5IFS\\SQLEXPRESS;Database=UtilityCalculatorLive;User Id=UtilityCalculatorLive;Password=0098611Roya;MultipleActiveResultSets=true;TrustServerCertificate=True",
     _ => throw new InvalidOperationException($"Unknown environment: {envName}")
 };
 
@@ -161,102 +161,102 @@ builder.Services.AddScoped<IAccessLevelAuthorizationService, AccessLevelAuthoriz
 Log.Information("Building application...");
 try
 {
-var app = builder.Build();
-Log.Information("Application built successfully");
+    var app = builder.Build();
+    Log.Information("Application built successfully");
 
-// Configure the HTTP request pipeline.
-Log.Information("Configuring HTTP request pipeline for {Environment}", app.Environment.EnvironmentName);
-if (app.Environment.IsDevelopment())
-{
-    Log.Information("Using development configuration - enabling migrations endpoint");
-    app.UseMigrationsEndPoint();
-}
-else
-{
-    Log.Information("Using production configuration - enabling exception handler and HSTS");
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    app.UseHsts();
-}
+    // Configure the HTTP request pipeline.
+    Log.Information("Configuring HTTP request pipeline for {Environment}", app.Environment.EnvironmentName);
+    if (app.Environment.IsDevelopment())
+    {
+        Log.Information("Using development configuration - enabling migrations endpoint");
+        app.UseMigrationsEndPoint();
+    }
+    else
+    {
+        Log.Information("Using production configuration - enabling exception handler and HSTS");
+        app.UseExceptionHandler("/Error", createScopeForErrors: true);
+        app.UseHsts();
+    }
 
-app.UseHttpsRedirection();
+    app.UseHttpsRedirection();
 
-app.UseAuthentication(); //This must be before IP check
+    app.UseAuthentication(); //This must be before IP check
 
-//IP Whitelist Middleware - COMMENTED OUT FOR TROUBLESHOOTING
-/*
-app.Use(async (context, next) =>
-{
+    //IP Whitelist Middleware - COMMENTED OUT FOR TROUBLESHOOTING
+    /*
+    app.Use(async (context, next) =>
+    {
+        try
+        {
+            Log.Debug("IP Whitelist middleware processing request for {Path} from IP {IP}", 
+                context.Request.Path, context.Connection.RemoteIpAddress?.ToString());
+
+            var ipService = context.RequestServices.GetRequiredService<IIPWhitelistService>();
+            var userManager = context.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
+
+            var anyIPsExist = await ipService.AnyWhitelistConfiguredAsync(); //check if list exists
+            if (!anyIPsExist)
+            {
+                Log.Debug("No IP whitelist configured, allowing request");
+                await next(); // Skip filtering
+                return;
+            }
+
+            var ip = context.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
+            Log.Debug("Checking IP {IP} against whitelist", ip);
+
+            var user = context.User.Identity?.IsAuthenticated == true
+                ? await userManager.GetUserAsync(context.User)
+                : null;
+
+            var allowed = await ipService.IsIPAllowedAsync(ip, user?.Id);
+
+            if (!allowed)
+            {
+                Log.Warning("Access denied for IP {IP} to path {Path}", ip, context.Request.Path);
+                context.Response.StatusCode = 403;
+                await context.Response.WriteAsync("Access Denied: Your IP is not whitelisted.");
+                return;
+            }
+
+            Log.Debug("IP {IP} allowed, proceeding to next middleware", ip);
+            await next();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in IP whitelist middleware for IP {IP} and path {Path}", 
+                context.Connection.RemoteIpAddress?.ToString(), context.Request.Path);
+            context.Response.StatusCode = 500;
+            await context.Response.WriteAsync("Internal server error in IP whitelist middleware.");
+        }
+    });
+    */
+
+    app.UseAuthorization();
+
+    app.UseAntiforgery();
+
     try
     {
-        Log.Debug("IP Whitelist middleware processing request for {Path} from IP {IP}", 
-            context.Request.Path, context.Connection.RemoteIpAddress?.ToString());
+        Log.Information("Mapping application endpoints...");
+        app.MapStaticAssets();
+        app.MapRazorComponents<App>()
+            .AddInteractiveServerRenderMode();
 
-        var ipService = context.RequestServices.GetRequiredService<IIPWhitelistService>();
-        var userManager = context.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
+        app.MapAdditionalIdentityEndpoints();
+        Log.Information("Application endpoints mapped successfully");
 
-        var anyIPsExist = await ipService.AnyWhitelistConfiguredAsync(); //check if list exists
-        if (!anyIPsExist)
-        {
-            Log.Debug("No IP whitelist configured, allowing request");
-            await next(); // Skip filtering
-            return;
-        }
-
-        var ip = context.Connection.RemoteIpAddress?.ToString() ?? string.Empty;
-        Log.Debug("Checking IP {IP} against whitelist", ip);
-
-        var user = context.User.Identity?.IsAuthenticated == true
-            ? await userManager.GetUserAsync(context.User)
-            : null;
-
-        var allowed = await ipService.IsIPAllowedAsync(ip, user?.Id);
-
-        if (!allowed)
-        {
-            Log.Warning("Access denied for IP {IP} to path {Path}", ip, context.Request.Path);
-            context.Response.StatusCode = 403;
-            await context.Response.WriteAsync("Access Denied: Your IP is not whitelisted.");
-            return;
-        }
-
-        Log.Debug("IP {IP} allowed, proceeding to next middleware", ip);
-        await next();
+        Log.Information("Starting application...");
+        app.Run();
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Error in IP whitelist middleware for IP {IP} and path {Path}", 
-            context.Connection.RemoteIpAddress?.ToString(), context.Request.Path);
-        context.Response.StatusCode = 500;
-        await context.Response.WriteAsync("Internal server error in IP whitelist middleware.");
+        Log.Fatal(ex, "Application failed to start");
+        throw;
     }
-});
-*/
-
-app.UseAuthorization();
-
-app.UseAntiforgery();
-
-try
-{
-    Log.Information("Mapping application endpoints...");
-    app.MapStaticAssets();
-    app.MapRazorComponents<App>()
-        .AddInteractiveServerRenderMode();
-
-    app.MapAdditionalIdentityEndpoints();
-    Log.Information("Application endpoints mapped successfully");
-
-    Log.Information("Starting application...");
-    app.Run();
-}
-catch (Exception ex)
-{
-    Log.Fatal(ex, "Application failed to start");
-    throw;
-}
-finally
-{
-    Log.CloseAndFlush();
+    finally
+    {
+        Log.CloseAndFlush();
     }
 
 }
