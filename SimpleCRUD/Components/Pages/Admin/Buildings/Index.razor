@@ -1,0 +1,88 @@
+@page "/admin/buildings"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using SimpleCRUD.DTO.Support
+@using SimpleCRUD.Engine.Support
+@using SimpleCRUD.Services
+@using Microsoft.AspNetCore.Identity
+@using SimpleCRUD.Data.Models
+@using Microsoft.EntityFrameworkCore
+@inject AuthenticationStateProvider AuthProvider
+@inject SupportLookupHandler LookupHandler
+@inject ToastService ToastService
+@inject UserManager<ApplicationUser> UserManager
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+
+<Toast />
+
+<AccessLevelView MinimumAccessLevelName="Admin">
+    <PageTitle>Buildings</PageTitle>
+
+    <h1 class="mb-4">All Buildings</h1>
+
+    @if (isLoading)
+    {
+        <p>Loading buildings...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert alert-danger">@loadError</div>
+    }
+    else if (!buildings.Any())
+    {
+        <div class="alert alert-info">No buildings found.</div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var building in buildings)
+            {
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">@building.Name</h5>
+                            <p class="card-text text-muted">View all flats in this building</p>
+                            <a href="/admin/buildings/@building.Id/flats" class="btn btn-primary d-block mt-auto">
+                                View Flats
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</AccessLevelView>
+
+@code {
+    private readonly List<BuildingOption> buildings = new();
+    private bool isLoading = true;
+    private string? loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBuildingsAsync();
+    }
+
+    private async Task LoadBuildingsAsync()
+    {
+        isLoading = true;
+        loadError = null;
+
+        var result = await LookupHandler.GetActiveBuildingsAsync();
+        if (result.IsSuccess && result.Data is not null)
+        {
+            buildings.Clear();
+            buildings.AddRange(result.Data.OrderBy(b => b.Name));
+        }
+        else
+        {
+            loadError = result.ErrorMessage ?? "Failed to load buildings.";
+            ToastService.ShowError(loadError);
+        }
+
+        isLoading = false;
+    }
+}
+

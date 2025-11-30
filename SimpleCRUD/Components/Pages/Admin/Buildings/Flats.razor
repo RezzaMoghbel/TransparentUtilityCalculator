@@ -1,0 +1,156 @@
+@page "/admin/buildings/{BuildingId}/flats"
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+@using SimpleCRUD.Components.Reuseables.Toasts
+@using SimpleCRUD.DTO.Identity
+@using SimpleCRUD.Engine.Test
+@using SimpleCRUD.Services
+@using Microsoft.AspNetCore.Identity
+@using SimpleCRUD.Data.Models
+@using Microsoft.EntityFrameworkCore
+@inject AuthenticationStateProvider AuthProvider
+@inject IdentityUserHandler<User> UserHandler
+@inject SupportLookupHandler LookupHandler
+@inject ToastService ToastService
+@inject NavigationManager NavManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
+
+<Toast />
+
+<AccessLevelView MinimumAccessLevelName="Admin">
+    <PageTitle>Flats - @buildingName</PageTitle>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="mb-0">@buildingName</h1>
+            <p class="text-muted mb-0">All flats in this building</p>
+        </div>
+        <a href="/admin/buildings" class="btn btn-outline-secondary">Back to Buildings</a>
+    </div>
+
+    @if (isLoading)
+    {
+        <p>Loading flats...</p>
+    }
+    else if (!string.IsNullOrEmpty(loadError))
+    {
+        <div class="alert alert-danger">@loadError</div>
+    }
+    else if (!flats.Any())
+    {
+        <div class="alert alert-info">No flats found in this building.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Flat/Property</th>
+                        <th>User Name</th>
+                        <th>Email</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var flat in flats)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@(flat.PropertyName ?? "N/A")</strong>
+                            </td>
+                            <td>@(flat.UserName ?? "N/A")</td>
+                            <td>@(flat.Email ?? "N/A")</td>
+                            <td>
+                                <a href="/dashboard?userId=@flat.ID" class="btn btn-sm btn-outline-primary">
+                                    View Dashboard
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</AccessLevelView>
+
+@code {
+    [Parameter] public string? BuildingId { get; set; }
+
+    private readonly List<FlatInfo> flats = new();
+    private string buildingName = "Building";
+    private bool isLoading = true;
+    private string? loadError;
+    private int buildingIdInt;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Parse BuildingId from route parameter (comes as string)
+        if (!string.IsNullOrEmpty(BuildingId) && int.TryParse(BuildingId, out var parsedId))
+        {
+            buildingIdInt = parsedId;
+            await LoadBuildingNameAsync();
+            await LoadFlatsAsync();
+        }
+        else
+        {
+            loadError = "Invalid building ID.";
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadBuildingNameAsync()
+    {
+        var result = await LookupHandler.GetActiveBuildingsAsync();
+        if (result.IsSuccess && result.Data is not null)
+        {
+            var building = result.Data.FirstOrDefault(b => b.Id == buildingIdInt);
+            buildingName = building?.Name ?? "Building";
+        }
+    }
+
+    private async Task LoadFlatsAsync()
+    {
+        isLoading = true;
+        loadError = null;
+
+        try
+        {
+            // Query users by BuildingId using IDbContextFactory to avoid concurrency issues
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+
+            var users = await dbContext.Users
+                .Where(u => u.BuildingId == buildingIdInt && !u.Deleted && u.AccessAllowed && u.AccessLevelId == 1)
+                .OrderBy(u => u.PropertyName ?? u.UserName ?? u.Email)
+                .Select(u => new FlatInfo
+                {
+                    ID = u.Id,
+                    UserName = u.UserName,
+                    Email = u.Email,
+                    PropertyName = u.PropertyName
+                })
+                .ToListAsync();
+
+            flats.Clear();
+            flats.AddRange(users);
+        }
+        catch (Exception ex)
+        {
+            loadError = $"Failed to load flats: {ex.Message}";
+            ToastService.ShowError(loadError);
+        }
+
+        isLoading = false;
+    }
+
+    private class FlatInfo
+    {
+        public string ID { get; set; } = string.Empty;
+        public string? UserName { get; set; }
+        public string? Email { get; set; }
+        public string? PropertyName { get; set; }
+    }
+}
+
