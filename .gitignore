@@ -418,3 +418,4 @@ FodyWeavers.xsd
 *.msp
 /Publish
 /SimpleCRUD/errors
+/LOCAL_CONFIGURATION.md
