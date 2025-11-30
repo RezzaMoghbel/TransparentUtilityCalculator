@@ -2,10 +2,15 @@
 @using SimpleCRUD.Components.Utils
 @using System.Reflection         
 @using System.Text.RegularExpressions
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using SimpleCRUD.Data.Models
 @inject NavigationManager NavigationManager
 @inject IWebHostEnvironment HostEnv
 @inject AuthenticationStateProvider AuthProvider
 @inject SupportPermissionService PermissionService
+@inject UserManager<ApplicationUser> UserManager
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
 
 <div class="nav-item px-3">
     <NavLink class="nav-link" href="/dashboard" Match="NavLinkMatch.All">
@@ -27,11 +32,14 @@
 
 @if (showUserSupportLinks)
 {
-    <div class="nav-item px-3">
-        <NavLink class="nav-link" href="/support/my-tickets">
-            <span class="bi bi-life-preserver" aria-hidden="true"></span> My Tickets
-        </NavLink>
-    </div>
+    @if (!isAdmin)
+    {
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/support/my-tickets">
+                <span class="bi bi-life-preserver" aria-hidden="true"></span> My Tickets
+            </NavLink>
+        </div>
+    }
     <div class="nav-item px-3">
         <NavLink class="nav-link" href="/support/announcements">
             <span class="bi bi-megaphone" aria-hidden="true"></span> Announcements
@@ -65,6 +73,7 @@
     private string appVersion = "";
     private bool showUserSupportLinks;
     private bool showAdminSupportLinks;
+    private bool isAdmin;
 
     protected override async Task OnInitializedAsync()
     {
@@ -86,6 +95,25 @@
         }
 
         var authState = await AuthProvider.GetAuthenticationStateAsync();
+        
+        // Get userId from claims (no database query needed)
+        var userId = UserManager.GetUserId(authState.User);
+        
+        // Query AccessLevelId directly using IDbContextFactory to avoid concurrency issues
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            var accessLevelId = await dbContext.Users
+                .Where(u => u.Id == userId)
+                .Select(u => u.AccessLevelId)
+                .FirstOrDefaultAsync();
+            isAdmin = accessLevelId >= 2;
+        }
+        else
+        {
+            isAdmin = false;
+        }
+
         var permissions = await PermissionService.GetPermissionsAsync(authState.User);
 
         showUserSupportLinks = permissions.Tickets.Read || permissions.Announcements.Read;
