@@ -149,6 +149,14 @@
         var appUser = await UserManager.GetUserAsync(authState.User);
         userId = appUser?.Id;
 
+        // Block Admins and higher from accessing user ticket pages
+        if (appUser?.AccessLevelId >= 2)
+        {
+            ToastService.ShowWarning("This page is only available to regular users. Admins should use the ticket management page.");
+            NavManager.NavigateTo("/support/admin/tickets");
+            return;
+        }
+
         var permissionSet = await PermissionService.GetPermissionsAsync(authState.User);
         canCreateTickets = permissionSet.Tickets.Create;
 

@@ -109,6 +109,14 @@
         userId = appUser?.Id;
         buildingId = appUser?.BuildingId ?? 0;
 
+        // Block Admins and higher from accessing user ticket creation page
+        if (appUser?.AccessLevelId >= 2)
+        {
+            ToastService.ShowWarning("This page is only available to regular users. Admins should use the ticket management page.");
+            NavManager.NavigateTo("/support/admin/tickets");
+            return;
+        }
+
         var permissionSet = await PermissionService.GetPermissionsAsync(authState.User);
         canCreateTickets = permissionSet.Tickets.Create;
 
