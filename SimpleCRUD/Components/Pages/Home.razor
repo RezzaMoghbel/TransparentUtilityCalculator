@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 
+@using Microsoft.AspNetCore.Components
 @using SimpleCRUD.Components.Reuseables.Charts
 @using SimpleCRUD.Components.Reuseables.Toasts
 @using SimpleCRUD.Components.Utils
@@ -10,8 +11,14 @@
 @using SimpleCRUD.Services
 @using SimpleCRUD.Engine.Test
 @using SimpleCRUD.Engine.DirectDebit
+@using Microsoft.AspNetCore.Identity
+@using SimpleCRUD.Data.Models
+@using Microsoft.EntityFrameworkCore
 @inject AuthenticationStateProvider AuthProvider
 @inject ToastService ToastService
+@inject NavigationManager NavManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
 
 @inject IdentityUserHandler<string> IdentityUserHandler
 @inject UtilityReportHandler<MonthlyAmountPoint> UtilityReportHandler
@@ -22,47 +29,74 @@
 <AccessLevelView MinimumAccessLevelName="all">
     <PageTitle>Home</PageTitle>
 
-    <h1>Dashboard</h1>
+    @if (isAdmin && string.IsNullOrEmpty(viewingUserId))
+    {
+        <div class="alert alert-info">
+            <h4>Admin Dashboard</h4>
+            <p>Select a building to view flats and their dashboards.</p>
+            <a href="/admin/buildings" class="btn btn-primary">View All Buildings</a>
+        </div>
+    }
+    else
+    {
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="mb-0">Dashboard</h1>
+            @if (isAdmin && !string.IsNullOrEmpty(viewingUserId))
+            {
+                <div>
+                    <span class="text-muted me-2">Viewing: @viewingUserName</span>
+                    <a href="/admin/buildings" class="btn btn-sm btn-outline-secondary">Back to Buildings</a>
+                </div>
+            }
+        </div>
+    }
 
-    <UtilityAmountCharts TPoint="MonthlyAmountPoint"
-                         Electricity="elecChartAmount"
-                         WaterCold="waterColdChartAmount"
-                         WaterHot="WaterHotChartAmount"
-                         MonthSelector="p => p.MonthStart"
-                         AmountSelector="p => p.TotalAmount"
-                         CurrencySymbol="£" />
+    @if (!isAdmin || !string.IsNullOrEmpty(viewingUserId))
+
+    {
+
+        <UtilityAmountCharts TPoint="MonthlyAmountPoint"
+        Electricity="elecChartAmount"
+        WaterCold="waterColdChartAmount"
+        WaterHot="WaterHotChartAmount"
+        MonthSelector="p => p.MonthStart"
+        AmountSelector="p => p.TotalAmount"
+        CurrencySymbol="£" />
 
 
-    <div class="row g-3 py-3">
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">Utility Readings</h5>
-                    <p class="card-text">A comprehensive list of your utility readings.</p>
-                    <a href="/utility-readings" class="btn btn-primary d-block mt-auto">View</a>
+
+
+        <div class="row g-3 py-3">
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">Utility Readings</h5>
+                        <p class="card-text">A comprehensive list of your utility readings.</p>
+                        <a href="/utility-readings" class="btn btn-primary d-block mt-auto">View</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">Direct Debits</h5>
+                        <p class="card-text">A comprehensive list of your monthly payments towards your utility bills.</p>
+                        <a href="/direct-debits" class="btn btn-primary d-block mt-auto">View</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">Direct Debit Balance</h5>
+                        <p class="card-text">View balance between direct debits and linked utility readings.</p>
+                        <a href="/reports/direct-debit-balance" class="btn btn-primary d-block mt-auto">View Report</a>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">Direct Debits</h5>
-                    <p class="card-text">A comprehensive list of your monthly payments towards your utility bills.</p>
-                    <a href="/direct-debits" class="btn btn-primary d-block mt-auto">View</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="card h-100">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">Direct Debit Balance</h5>
-                    <p class="card-text">View balance between direct debits and linked utility readings.</p>
-                    <a href="/reports/direct-debit-balance" class="btn btn-primary d-block mt-auto">View Report</a>
-                </div>
-            </div>
-        </div>
-    </div>
 
+    
     <!-- Overall Balance Summary -->
     @if (overallSummary is not null && overallSummary.Any())
     {
@@ -134,6 +168,7 @@
             }
         </div>
     }
+    }
 </AccessLevelView>
 
 @code {
@@ -144,31 +179,82 @@
 
     private string? userName;
     private string? userID;
+    private string? viewingUserId;
+    private string? viewingUserName;
+    private bool isAdmin;
+
+    [SupplyParameterFromQuery(Name = "userId")]
+    public string? UserIdQuery { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         userName = authState.User.Identity?.Name;
 
-        var result = await IdentityUserHandler.GetUserIdByUsername(userName);
-        userID = result.Data;
+        // Check if current user is Admin - use IDbContextFactory to avoid concurrency issues
+        var currentUserId = UserManager.GetUserId(authState.User);
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            var accessLevelId = await dbContext.Users
+                .Where(u => u.Id == currentUserId)
+                .Select(u => u.AccessLevelId)
+                .FirstOrDefaultAsync();
+            isAdmin = accessLevelId >= 2;
+        }
+        else
+        {
+            isAdmin = false;
+        }
+
+        // Determine which user's dashboard to show
+        if (isAdmin && !string.IsNullOrEmpty(UserIdQuery))
+        {
+            // Admin viewing a specific user's dashboard
+            viewingUserId = UserIdQuery;
+            
+            // Get the viewing user's name
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            var viewingUser = await dbContext.Users
+                .Where(u => u.Id == viewingUserId)
+                .Select(u => new { u.UserName, u.Email, u.PropertyName })
+                .FirstOrDefaultAsync();
+            
+            viewingUserName = viewingUser?.UserName ?? viewingUser?.Email ?? viewingUser?.PropertyName ?? "User";
+            userID = viewingUserId;
+        }
+        else
+        {
+            // Regular user or Admin without userId parameter
+            var result = await IdentityUserHandler.GetUserIdByUsername(userName);
+            userID = result.Data;
+        }
 
         if (string.IsNullOrEmpty(userID))
-            return;
-
-        var electricityAmount = await UtilityReportHandler.GetMonthlyAmount(userID, UtilityTypes.For("1"));
-        var waterColdAmount = await UtilityReportHandler.GetMonthlyAmount(userID, UtilityTypes.For("3"));
-        var waterHotAmount = await UtilityReportHandler.GetMonthlyAmount(userID, UtilityTypes.For("4"));
-
-        elecChartAmount = electricityAmount?.Data;
-        waterColdChartAmount = waterColdAmount?.Data;
-        WaterHotChartAmount = waterHotAmount?.Data;
-
-        // Load overall summary
-        var summaryResult = await OverallSummaryHandler.GetOverallSummary(userID);
-        if (summaryResult.IsSuccess)
         {
-            overallSummary = summaryResult.Data;
+            // If Admin and no userId, they'll see the building selection message
+            if (!isAdmin)
+            {
+                return;
+            }
+        }
+        else
+        {
+            // Load dashboard data only if we have a userID
+            var electricityAmount = await UtilityReportHandler.GetMonthlyAmount(userID, UtilityTypes.For("1"));
+            var waterColdAmount = await UtilityReportHandler.GetMonthlyAmount(userID, UtilityTypes.For("3"));
+            var waterHotAmount = await UtilityReportHandler.GetMonthlyAmount(userID, UtilityTypes.For("4"));
+
+            elecChartAmount = electricityAmount?.Data;
+            waterColdChartAmount = waterColdAmount?.Data;
+            WaterHotChartAmount = waterHotAmount?.Data;
+
+            // Load overall summary
+            var summaryResult = await OverallSummaryHandler.GetOverallSummary(userID);
+            if (summaryResult.IsSuccess)
+            {
+                overallSummary = summaryResult.Data;
+            }
         }
     }
 
