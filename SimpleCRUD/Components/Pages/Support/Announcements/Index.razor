@@ -2,6 +2,10 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 
+@using Microsoft.AspNetCore.Identity
+@using SimpleCRUD.Data.Models
+@using Microsoft.EntityFrameworkCore
+@using SimpleCRUD.Components.Reuseables.Toasts
 @inject AuthenticationStateProvider AuthProvider
 @inject SupportAnnouncementHandler AnnouncementHandler
 @inject SupportLookupHandler LookupHandler
@@ -9,6 +13,7 @@
 @inject ToastService ToastService
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavManager
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
 
 <Toast />
 
@@ -116,10 +121,36 @@
     private int pageSize = 5;
     private int totalCount;
     private string? selectedCategoryCode;
+    private bool isAdmin;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthProvider.GetAuthenticationStateAsync();
+        
+        // Check if user is Admin - use IDbContextFactory to avoid concurrency issues
+        var currentUserId = UserManager.GetUserId(authState.User);
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            await using var dbContext = await DbContextFactory.CreateDbContextAsync();
+            var accessLevelId = await dbContext.Users
+                .Where(u => u.Id == currentUserId)
+                .Select(u => u.AccessLevelId)
+                .FirstOrDefaultAsync();
+            isAdmin = accessLevelId >= 2;
+        }
+        else
+        {
+            isAdmin = false;
+        }
+
+        // Redirect Admins to the admin announcements page
+        if (isAdmin)
+        {
+            ToastService.ShowWarning("Admins should use the Admin Announcements page. Redirecting...");
+            NavManager.NavigateTo("/support/admin/announcements");
+            return;
+        }
+
         var user = await UserManager.GetUserAsync(authState.User);
         buildingId = user?.BuildingId;
 
