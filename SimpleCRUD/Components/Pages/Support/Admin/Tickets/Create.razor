@@ -150,6 +150,14 @@
         var permissions = await PermissionService.GetPermissionsAsync(authState.User);
         canCreateTickets = permissions.Tickets.Create;
 
+        // Redirect Admins away from ticket creation - they should not create tickets themselves
+        if (!canCreateTickets)
+        {
+            ToastService.ShowWarning("Admins cannot create tickets. Please use the user ticket creation page if needed.");
+            NavManager.NavigateTo("/support/admin/tickets");
+            return;
+        }
+
         await LoadLookupsAsync();
 
         if (string.IsNullOrEmpty(userId))
