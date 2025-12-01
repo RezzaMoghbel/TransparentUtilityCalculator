@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 
+@using SimpleCRUD.Components.Reuseables.Dialogs
 @inject AuthenticationStateProvider AuthProvider
 @inject SupportAnnouncementHandler AnnouncementHandler
 @inject SupportLookupHandler LookupHandler
@@ -30,7 +31,7 @@
     }
     else
     {
-        <EditForm Model="@formModel" OnValidSubmit="HandleSubmit">
+        <EditForm Model="@formModel" OnValidSubmit="HandleSubmit" @ref="editForm">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" />
 
@@ -80,26 +81,71 @@
 
             <div class="mb-3">
                 <label class="form-label fw-semibold">Publish date</label>
-                <InputDate class="form-control" @bind-Value="formModel.PublishedAt" />
+                <InputDate class="form-control" @bind-Value="formModel.PublishedAt" disabled="true" />
+                <small class="form-text text-muted">Publish date cannot be changed</small>
             </div>
 
             <div class="form-check form-switch mb-2">
-                <InputCheckbox class="form-check-input" @bind-Value="formModel.IsActive" />
+                <InputCheckbox class="form-check-input" @bind-Value="formModel.IsActive" @bind-Value:after="OnIsActiveChanged" />
                 <label class="form-check-label">Active</label>
             </div>
             <div class="form-check form-switch mb-3">
-                <InputCheckbox class="form-check-input" @bind-Value="formModel.IsArchived" />
+                <InputCheckbox class="form-check-input" @bind-Value="formModel.IsArchived" @bind-Value:after="OnIsArchivedChanged" />
                 <label class="form-check-label">Archived</label>
             </div>
 
             <div class="d-flex gap-2 flex-wrap">
-                <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                <button class="btn btn-primary" type="button" @onclick="HandleSaveClick" disabled="@isSaving">
                     @(isSaving ? "Saving..." : "Save changes")
                 </button>
-                <button class="btn btn-outline-secondary" type="button" @onclick="Cancel">Cancel</button>
+                <button class="btn btn-outline-secondary" type="button" @onclick="HandleCancel">Cancel</button>
             </div>
         </EditForm>
     }
+
+    <ConfirmationModal IsVisible="@showSaveModal"
+                       Title="Save Changes?"
+                       ConfirmButtonText="Yes, Save Changes"
+                       ConfirmButtonClass="@(saveModalIsDangerous ? "btn-danger" : "btn-primary")"
+                       HeaderClass="@(saveModalIsDangerous ? "bg-danger text-white" : "")"
+                       OnConfirm="ConfirmSave"
+                       OnCancel="CancelSaveModal">
+        <p>Are you sure you want to save the following changes?</p>
+        @if (saveModalWarningMessage != null)
+        {
+            <p class="mb-0 mt-2 fw-semibold text-danger">@saveModalWarningMessage</p>
+        }
+    </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@showCancelModal"
+                       Title="Discard Changes?"
+                       ConfirmButtonText="Yes, Discard Changes"
+                       ConfirmButtonClass="btn-danger"
+                       OnConfirm="ConfirmCancel"
+                       OnCancel="CancelCancelModal">
+        <p>You have unsaved changes. Are you sure you want to cancel? All entered data will be lost.</p>
+    </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@showDeactivateModal"
+                       Title="Deactivate Announcement?"
+                       ConfirmButtonText="Yes, Deactivate"
+                       ConfirmButtonClass="btn-danger"
+                       HeaderClass="bg-danger text-white"
+                       OnConfirm="ConfirmDeactivate"
+                       OnCancel="CancelDeactivateModal">
+        <p>You are deactivating this announcement. Are you sure?</p>
+    </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@showArchiveModal"
+                       Title="Archive Announcement?"
+                       ConfirmButtonText="Yes, Archive"
+                       ConfirmButtonClass="btn-danger"
+                       HeaderClass="bg-danger text-white"
+                       OnConfirm="ConfirmArchive"
+                       OnCancel="CancelArchiveModal">
+        <p>You are archiving this announcement. Are you sure?</p>
+    </ConfirmationModal>
+
 </AccessLevelView>
 
 @code {
@@ -110,12 +156,36 @@
     private readonly List<AnnouncementScope> scopes = new();
 
     private AnnouncementUpdateRequest formModel = new();
+    private AnnouncementUpdateRequest originalModel = new();
     private bool canUpdateAnnouncements;
     private bool isLoading = true;
     private bool isSaving;
     private string? loadError;
+    private bool showSaveModal;
+    private bool showCancelModal;
+    private bool showDeactivateModal;
+    private bool showArchiveModal;
+    private bool pendingIsActive;
+    private bool pendingIsArchived;
+    private bool saveModalIsDangerous;
+    private string? saveModalWarningMessage;
+    private EditForm? editForm;
 
     private bool IsGlobalScope => scopes.FirstOrDefault(s => s.Id == formModel.ScopeId)?.Code == "GLOBAL";
+
+    private bool HasChanges
+    {
+        get
+        {
+            return formModel.Title != originalModel.Title ||
+                   formModel.Body != originalModel.Body ||
+                   formModel.CategoryId != originalModel.CategoryId ||
+                   formModel.ScopeId != originalModel.ScopeId ||
+                   formModel.BuildingId != originalModel.BuildingId ||
+                   formModel.IsActive != originalModel.IsActive ||
+                   formModel.IsArchived != originalModel.IsArchived;
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -182,6 +252,21 @@
             IsArchived = announcement.IsArchived,
             PublishedAt = announcement.PublishedAt
         };
+
+        // Store original state for comparison
+        originalModel = new AnnouncementUpdateRequest
+        {
+            Id = formModel.Id,
+            Title = formModel.Title,
+            Body = formModel.Body,
+            CategoryId = formModel.CategoryId,
+            ScopeId = formModel.ScopeId,
+            BuildingId = formModel.BuildingId,
+            SourceTicketId = formModel.SourceTicketId,
+            IsActive = formModel.IsActive,
+            IsArchived = formModel.IsArchived,
+            PublishedAt = formModel.PublishedAt
+        };
     }
 
     private Task OnScopeChanged(ChangeEventArgs e)
@@ -198,7 +283,66 @@
             formModel.BuildingId = null;
         }
 
+        // Trigger state update to reflect changes
+        StateHasChanged();
         return Task.CompletedTask;
+    }
+
+    private void HandleSaveClick()
+    {
+        // If no changes, treat as cancel (just navigate away)
+        if (!HasChanges)
+        {
+            NavManager.NavigateTo("/support/admin/announcements");
+            return;
+        }
+
+        // Validate form first
+        if (editForm?.EditContext != null && !editForm.EditContext.Validate())
+        {
+            // Form is invalid, let validation messages show
+            return;
+        }
+
+        // Check if announcement is being deactivated or archived
+        bool isBeingDeactivated = originalModel.IsActive && !formModel.IsActive;
+        bool isBeingArchived = !originalModel.IsArchived && formModel.IsArchived;
+
+        // Set warning message and danger styling
+        if (isBeingDeactivated && isBeingArchived)
+        {
+            saveModalWarningMessage = "This announcement is going to be deactivated and archived.";
+            saveModalIsDangerous = true;
+        }
+        else if (isBeingDeactivated)
+        {
+            saveModalWarningMessage = "This announcement is going to be deactivated.";
+            saveModalIsDangerous = true;
+        }
+        else if (isBeingArchived)
+        {
+            saveModalWarningMessage = "This announcement is going to be archived.";
+            saveModalIsDangerous = true;
+        }
+        else
+        {
+            saveModalWarningMessage = null;
+            saveModalIsDangerous = false;
+        }
+
+        // Show confirmation modal
+        showSaveModal = true;
+    }
+
+    private void CancelSaveModal()
+    {
+        showSaveModal = false;
+    }
+
+    private async Task ConfirmSave()
+    {
+        showSaveModal = false;
+        await HandleSubmit();
     }
 
     private async Task HandleSubmit()
@@ -227,6 +371,81 @@
         NavManager.NavigateTo($"/support/admin/announcements/{formModel.Id}");
     }
 
-    private void Cancel() => NavManager.NavigateTo("/support/admin/announcements");
+    private void HandleCancel()
+    {
+        // If no changes, navigate directly without modal
+        if (!HasChanges)
+        {
+            NavManager.NavigateTo("/support/admin/announcements");
+            return;
+        }
+
+        // Show confirmation modal if changes exist
+        showCancelModal = true;
+    }
+
+    private void CancelCancelModal()
+    {
+        showCancelModal = false;
+    }
+
+    private void ConfirmCancel()
+    {
+        showCancelModal = false;
+        NavManager.NavigateTo("/support/admin/announcements");
+    }
+
+    private void OnIsActiveChanged()
+    {
+        // Only show modal if changing from true to false
+        if (!formModel.IsActive && originalModel.IsActive)
+        {
+            pendingIsActive = false;
+            showDeactivateModal = true;
+            // Revert the change until confirmed
+            formModel.IsActive = originalModel.IsActive;
+        }
+    }
+
+    private void OnIsArchivedChanged()
+    {
+        // Only show modal if changing from false to true
+        if (formModel.IsArchived && !originalModel.IsArchived)
+        {
+            pendingIsArchived = true;
+            showArchiveModal = true;
+            // Revert the change until confirmed
+            formModel.IsArchived = originalModel.IsArchived;
+        }
+    }
+
+    private void ConfirmDeactivate()
+    {
+        showDeactivateModal = false;
+        formModel.IsActive = pendingIsActive;
+        StateHasChanged();
+    }
+
+    private void CancelDeactivateModal()
+    {
+        showDeactivateModal = false;
+        formModel.IsActive = originalModel.IsActive;
+        StateHasChanged();
+    }
+
+    private void ConfirmArchive()
+    {
+        showArchiveModal = false;
+        formModel.IsArchived = pendingIsArchived;
+        StateHasChanged();
+    }
+
+    private void CancelArchiveModal()
+    {
+        showArchiveModal = false;
+        formModel.IsArchived = originalModel.IsArchived;
+        StateHasChanged();
+    }
+
 }
 
