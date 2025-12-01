@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 
+@using SimpleCRUD.Components.Reuseables.Dialogs
 @inject SupportAnnouncementHandler AnnouncementHandler
 @inject SupportPermissionService PermissionService
 @inject ToastService ToastService
@@ -34,7 +35,7 @@
             <div class="card-header d-flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
                     <h1 class="h4 mb-1">@announcement.Title</h1>
-                    <div class="text-muted small">Published @announcement.PublishedAt?.ToLocalTime():g</div>
+                    <div class="text-muted small">Published @announcement.PublishedAt?.ToLocalTime().ToString("g")</div>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
                     @if (canUpdateAnnouncements)
@@ -70,7 +71,7 @@
                         @foreach (var update in updates)
                         {
                             <li class="mb-3">
-                                <div class="fw-semibold">@update.CreatedAt.ToLocalTime():g</div>
+                                <div class="fw-semibold">@update.CreatedAt.ToLocalTime().ToString("g")</div>
                                 <div style="white-space:pre-wrap;">@update.Body</div>
                             </li>
                         }
@@ -86,14 +87,14 @@
                     <h2 class="h5 mb-0">Add Update</h2>
                 </div>
                 <div class="card-body">
-                    <EditForm Model="@updateModel" OnValidSubmit="HandleUpdateSubmit">
+                    <EditForm Model="@updateModel" OnValidSubmit="HandleUpdateSubmit" @ref="updateForm">
                         <DataAnnotationsValidator />
                         <ValidationSummary class="text-danger" />
                         <div class="mb-3">
                             <InputTextArea class="form-control" rows="4" @bind-Value="updateModel.Body" />
                             <ValidationMessage For="@(() => updateModel.Body)" />
                         </div>
-                        <button class="btn btn-primary" type="submit" disabled="@isPostingUpdate">
+                        <button class="btn btn-primary" type="button" @onclick="HandlePostUpdateClick" disabled="@isPostingUpdate">
                             @(isPostingUpdate ? "Posting..." : "Post update")
                         </button>
                     </EditForm>
@@ -103,6 +104,34 @@
 
         <button class="btn btn-outline-secondary" @onclick="GoBack">Back to list</button>
     }
+
+    <ConfirmationModal IsVisible="@showArchiveModal"
+                       Title="Archive Announcement?"
+                       ConfirmButtonText="Yes, Archive"
+                       ConfirmButtonClass="btn-danger"
+                       HeaderClass="bg-danger text-white"
+                       OnConfirm="ConfirmArchive"
+                       OnCancel="CancelArchiveModal">
+        <p>You are archiving this announcement. Are you sure?</p>
+    </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@showRestoreModal"
+                       Title="Restore Announcement?"
+                       ConfirmButtonText="Yes, Restore"
+                       ConfirmButtonClass="btn-primary"
+                       OnConfirm="ConfirmRestore"
+                       OnCancel="CancelRestoreModal">
+        <p>You are restoring this announcement. Are you sure?</p>
+    </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@showPostUpdateModal"
+                       Title="Post Update?"
+                       ConfirmButtonText="Yes, Post Update"
+                       ConfirmButtonClass="btn-primary"
+                       OnConfirm="ConfirmPostUpdate"
+                       OnCancel="CancelPostUpdateModal">
+        <p>Are you sure you would like to add an update to this announcement?</p>
+    </ConfirmationModal>
 </AccessLevelView>
 
 @code {
@@ -116,6 +145,10 @@
     private bool isLoading = true;
     private bool isPostingUpdate;
     private string? loadError;
+    private bool showArchiveModal;
+    private bool showRestoreModal;
+    private bool showPostUpdateModal;
+    private EditForm? updateForm;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -155,6 +188,36 @@
         };
     }
 
+    private void HandlePostUpdateClick()
+    {
+        // Validate form first
+        if (updateForm?.EditContext != null && !updateForm.EditContext.Validate())
+        {
+            // Form is invalid, let validation messages show
+            return;
+        }
+
+        // Check if update body has content
+        if (string.IsNullOrWhiteSpace(updateModel.Body))
+        {
+            return;
+        }
+
+        // Show confirmation modal
+        showPostUpdateModal = true;
+    }
+
+    private void CancelPostUpdateModal()
+    {
+        showPostUpdateModal = false;
+    }
+
+    private async Task ConfirmPostUpdate()
+    {
+        showPostUpdateModal = false;
+        await HandleUpdateSubmit();
+    }
+
     private async Task HandleUpdateSubmit()
     {
         if (!canUpdateAnnouncements || string.IsNullOrWhiteSpace(updateModel.CreatedByUserId))
@@ -177,9 +240,51 @@
         ToastService.ShowSuccess("Update added.");
     }
 
-    private async Task ToggleArchive()
+    private void ToggleArchive()
     {
         if (!canDeleteAnnouncements || announcement is null)
+        {
+            return;
+        }
+
+        // Show modal for both archive and restore
+        if (!announcement.IsArchived)
+        {
+            // Archiving
+            showArchiveModal = true;
+        }
+        else
+        {
+            // Restoring
+            showRestoreModal = true;
+        }
+    }
+
+    private void CancelArchiveModal()
+    {
+        showArchiveModal = false;
+    }
+
+    private async Task ConfirmArchive()
+    {
+        showArchiveModal = false;
+        await PerformArchiveToggle(false);
+    }
+
+    private void CancelRestoreModal()
+    {
+        showRestoreModal = false;
+    }
+
+    private async Task ConfirmRestore()
+    {
+        showRestoreModal = false;
+        await PerformArchiveToggle(true);
+    }
+
+    private async Task PerformArchiveToggle(bool isRestore)
+    {
+        if (announcement is null)
         {
             return;
         }
@@ -194,7 +299,7 @@
             BuildingId = announcement.BuildingId,
             SourceTicketId = announcement.SourceTicketId,
             IsActive = announcement.IsActive,
-            IsArchived = !announcement.IsArchived,
+            IsArchived = isRestore ? false : true,
             PublishedAt = announcement.PublishedAt
         };
 
@@ -205,7 +310,7 @@
             return;
         }
 
-        ToastService.ShowSuccess(announcement.IsArchived ? "Announcement restored." : "Announcement archived.");
+        ToastService.ShowSuccess(isRestore ? "Announcement restored." : "Announcement archived.");
         await InitializeAsync();
     }
 

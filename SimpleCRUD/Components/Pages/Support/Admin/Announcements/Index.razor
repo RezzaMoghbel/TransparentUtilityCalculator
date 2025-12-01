@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 
+@using SimpleCRUD.Components.Reuseables.Dialogs
 @inject AuthenticationStateProvider AuthProvider
 @inject SupportAnnouncementHandler AnnouncementHandler
 @inject SupportLookupHandler LookupHandler
@@ -114,7 +115,7 @@
                                 <td>@GetScopeName(announcement.ScopeId)</td>
                                 <td>@GetBuildingName(announcement.BuildingId)</td>
                                 <td>@GetCategoryName(announcement.CategoryId)</td>
-                                <td>@announcement.PublishedAt?.ToLocalTime():g</td>
+                                <td>@announcement.PublishedAt?.ToLocalTime().ToString("g")</td>
                                 <td>
                                     @if (announcement.IsArchived)
                                     {
@@ -166,6 +167,25 @@
             </div>
         }
     }
+
+    <ConfirmationModal IsVisible="@showArchiveModal"
+                       Title="Archive Announcement?"
+                       ConfirmButtonText="Yes, Archive"
+                       ConfirmButtonClass="btn-danger"
+                       HeaderClass="bg-danger text-white"
+                       OnConfirm="ConfirmArchive"
+                       OnCancel="CancelArchiveModal">
+        <p>You are archiving this announcement. Are you sure?</p>
+    </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@showRestoreModal"
+                       Title="Restore Announcement?"
+                       ConfirmButtonText="Yes, Restore"
+                       ConfirmButtonClass="btn-primary"
+                       OnConfirm="ConfirmRestore"
+                       OnCancel="CancelRestoreModal">
+        <p>You are restoring this announcement. Are you sure?</p>
+    </ConfirmationModal>
 </AccessLevelView>
 
 @code {
@@ -189,6 +209,9 @@
     private bool canCreateAnnouncements;
     private bool canUpdateAnnouncements;
     private bool canDeleteAnnouncements;
+    private bool showArchiveModal;
+    private bool showRestoreModal;
+    private SupportAnnouncement? pendingAnnouncement;
 
     protected override async Task OnInitializedAsync()
     {
@@ -327,13 +350,62 @@
     private string GetCategoryName(int? categoryId)
         => categories.FirstOrDefault(c => c.Id == categoryId)?.Name ?? "General";
 
-    private async Task ToggleArchive(SupportAnnouncement announcement)
+    private void ToggleArchive(SupportAnnouncement announcement)
     {
         if (!canDeleteAnnouncements)
         {
             return;
         }
 
+        // Show modal for both archive and restore
+        if (!announcement.IsArchived)
+        {
+            // Archiving
+            pendingAnnouncement = announcement;
+            showArchiveModal = true;
+        }
+        else
+        {
+            // Restoring
+            pendingAnnouncement = announcement;
+            showRestoreModal = true;
+        }
+    }
+
+    private void CancelArchiveModal()
+    {
+        showArchiveModal = false;
+        pendingAnnouncement = null;
+    }
+
+    private async Task ConfirmArchive()
+    {
+        showArchiveModal = false;
+        if (pendingAnnouncement is not null)
+        {
+            await PerformArchiveToggle(pendingAnnouncement, false);
+            pendingAnnouncement = null;
+        }
+    }
+
+    private void CancelRestoreModal()
+    {
+        showRestoreModal = false;
+        pendingAnnouncement = null;
+    }
+
+    private async Task ConfirmRestore()
+    {
+        showRestoreModal = false;
+        if (pendingAnnouncement is not null)
+        {
+            await PerformArchiveToggle(pendingAnnouncement, true);
+            pendingAnnouncement = null;
+        }
+    }
+
+    private async Task PerformArchiveToggle(SupportAnnouncement announcement, bool isRestore)
+    {
         var update = new AnnouncementUpdateRequest
         {
             Id = announcement.Id,
@@ -344,7 +416,7 @@
             BuildingId = announcement.BuildingId,
             SourceTicketId = announcement.SourceTicketId,
             IsActive = announcement.IsActive,
-            IsArchived = !announcement.IsArchived,
+            IsArchived = isRestore ? false : true,
             PublishedAt = announcement.PublishedAt
         };
 
@@ -355,7 +427,7 @@
             return;
         }
 
-        ToastService.ShowSuccess(announcement.IsArchived ? "Announcement restored." : "Announcement archived.");
+        ToastService.ShowSuccess(isRestore ? "Announcement restored." : "Announcement archived.");
         await LoadAnnouncementsAsync();
     }
 }
