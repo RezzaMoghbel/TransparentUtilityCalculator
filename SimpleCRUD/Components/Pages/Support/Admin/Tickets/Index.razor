@@ -130,7 +130,7 @@
                                 <td>@GetUserDisplayName(ticket.AssignedToUserId)</td>
                                 <td>@GetStatusName(ticket.StatusId)</td>
                                 <td>@GetPriorityName(ticket.PriorityId)</td>
-                                <td>@ticket.CreatedAt.ToLocalTime():g</td>
+                                <td>@ticket.CreatedAt.ToLocalTime().ToString("g")</td>
                                 <td class="text-end">
                                     <ViewButton Route="@($"/support/admin/tickets/{ticket.Id}")" ExtraStyleClass="btn-sm" DisplayTitle="true" />
                                     @if (canDeleteTickets && !ticket.IsArchived)
