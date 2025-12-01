@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 
+@using SimpleCRUD.Components.Reuseables.Dialogs
 @inject AuthenticationStateProvider AuthProvider
 @inject SupportAnnouncementHandler AnnouncementHandler
 @inject SupportLookupHandler LookupHandler
@@ -33,7 +34,7 @@
     }
     else
     {
-        <EditForm Model="@formModel" OnValidSubmit="HandleSubmit">
+        <EditForm Model="@formModel" OnValidSubmit="HandleSubmit" @ref="editForm">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" />
 
@@ -81,24 +82,32 @@
                 <ValidationMessage For="@(() => formModel.Body)" />
             </div>
 
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Publish date (optional)</label>
-                <InputDate class="form-control" @bind-Value="formModel.PublishedAt" />
-            </div>
-
-            <div class="form-check form-switch mb-3">
-                <InputCheckbox class="form-check-input" @bind-Value="formModel.IsActive" />
-                <label class="form-check-label">Active</label>
-            </div>
-
             <div class="d-flex gap-2 flex-wrap">
-                <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                <button class="btn btn-primary" type="button" @onclick="HandleSubmitClick" disabled="@isSaving">
                     @(isSaving ? "Saving..." : "Create Announcement")
                 </button>
-                <button class="btn btn-outline-secondary" type="button" @onclick="Cancel">Cancel</button>
+                <button class="btn btn-outline-secondary" type="button" @onclick="HandleCancel">Cancel</button>
             </div>
         </EditForm>
     }
+
+    <ConfirmationModal IsVisible="@showSubmitModal"
+                       Title="Create Announcement?"
+                       ConfirmButtonText="Yes, Create Announcement"
+                       ConfirmButtonClass="btn-primary"
+                       OnConfirm="ConfirmSubmit"
+                       OnCancel="CancelSubmitModal">
+        <p>Are you sure you want to create this announcement? It will be published immediately and visible to users.</p>
+    </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@showCancelModal"
+                       Title="Discard Changes?"
+                       ConfirmButtonText="Yes, Discard Changes"
+                       ConfirmButtonClass="btn-danger"
+                       OnConfirm="ConfirmCancel"
+                       OnCancel="CancelCancelModal">
+        <p>You have unsaved changes. Are you sure you want to cancel? All entered data will be lost.</p>
+    </ConfirmationModal>
 </AccessLevelView>
 
 @code {
@@ -112,6 +121,9 @@
     private bool canCreateAnnouncements;
     private string? loadError;
     private string? userId;
+    private bool showCancelModal;
+    private bool showSubmitModal;
+    private EditForm? editForm;
 
     private bool IsGlobalScope => scopes.FirstOrDefault(s => s.Id == formModel.ScopeId)?.Code == "GLOBAL";
 
@@ -134,7 +146,7 @@
         {
             formModel.CreatedByUserId = userId;
             formModel.IsActive = true;
-            formModel.PublishedAt = DateTime.UtcNow;
+            // PublishedAt will be set to current time on submit
         }
 
         isLoading = false;
@@ -163,6 +175,30 @@
         }
     }
 
+    private void HandleSubmitClick()
+    {
+        // Validate form first
+        if (editForm?.EditContext != null && !editForm.EditContext.Validate())
+        {
+            // Form is invalid, let validation messages show
+            return;
+        }
+
+        // Form is valid, show confirmation modal
+        showSubmitModal = true;
+    }
+
+    private void CancelSubmitModal()
+    {
+        showSubmitModal = false;
+    }
+
+    private async Task ConfirmSubmit()
+    {
+        showSubmitModal = false;
+        await HandleSubmit();
+    }
+
     private async Task HandleSubmit()
     {
         if (!canCreateAnnouncements || string.IsNullOrEmpty(userId))
@@ -174,6 +210,10 @@
         {
             formModel.BuildingId = null;
         }
+
+        // Always set publish date to current UTC time
+        formModel.PublishedAt = DateTime.UtcNow;
+        formModel.IsActive = true; // Always active for new announcements
 
         isSaving = true;
         var result = await AnnouncementHandler.CreateAnnouncementAsync(formModel);
@@ -189,6 +229,30 @@
         NavManager.NavigateTo($"/support/admin/announcements/{result.Data.Id}");
     }
 
-    private void Cancel() => NavManager.NavigateTo("/support/admin/announcements");
+    private void HandleCancel()
+    {
+        // Check if user has entered any data in Title or Body
+        var hasData = !string.IsNullOrWhiteSpace(formModel.Title) || !string.IsNullOrWhiteSpace(formModel.Body);
+        
+        if (hasData)
+        {
+            showCancelModal = true;
+        }
+        else
+        {
+            NavManager.NavigateTo("/support/admin/announcements");
+        }
+    }
+
+    private void CancelCancelModal()
+    {
+        showCancelModal = false;
+    }
+
+    private void ConfirmCancel()
+    {
+        showCancelModal = false;
+        NavManager.NavigateTo("/support/admin/announcements");
+    }
 }
 
