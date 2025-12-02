@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 
+@using SimpleCRUD.Components.Reuseables.Dialogs
 @inject AuthenticationStateProvider AuthProvider
 @inject SupportTicketHandler TicketHandler
 @inject SupportTicketMessageHandler MessageHandler
@@ -83,7 +84,7 @@
                             <h2 class="h5 mb-0">Update Ticket</h2>
                         </div>
                         <div class="card-body">
-                            <EditForm Model="@updateModel" OnValidSubmit="HandleTicketUpdate">
+                            <EditForm Model="@updateModel" OnValidSubmit="HandleTicketUpdate" @ref="updateForm">
                                 <DataAnnotationsValidator />
                                 <ValidationSummary class="text-danger" />
 
@@ -164,12 +165,12 @@
                                 </div>
 
                                 <div class="d-flex gap-2 flex-wrap mt-3">
-                                    <button class="btn btn-primary" type="submit" disabled="@isSavingTicket">
+                                    <button class="btn btn-primary" type="button" @onclick="HandleSaveClick" disabled="@isSavingTicket">
                                         @(isSavingTicket ? "Saving..." : "Save changes")
                                     </button>
-                                    @if (canUpdateTickets && userId is not null)
+                                    @if (canUpdateTickets && userId is not null && ticket is not null && ticket.AssignedToUserId != userId)
                                     {
-                                        <button class="btn btn-outline-secondary" type="button" @onclick="AssignToMe">Assign to me</button>
+                                        <button class="btn btn-outline-secondary" type="button" @onclick="HandleAssignToMeClick">Assign to me</button>
                                     }
                                     @if (canDeleteTickets && !ticket.IsArchived)
                                     {
@@ -228,7 +229,7 @@
                             <h2 class="h5 mb-0">Add update</h2>
                         </div>
                         <div class="card-body">
-                            <EditForm Model="@messageModel" OnValidSubmit="HandleMessageSubmit">
+                            <EditForm Model="@messageModel" OnValidSubmit="HandleMessageSubmit" @ref="messageForm">
                                 <DataAnnotationsValidator />
                                 <ValidationSummary class="text-danger" />
                                 <div class="mb-3">
@@ -239,7 +240,7 @@
                                     <InputCheckbox class="form-check-input" @bind-Value="messageModel.IsInternal" />
                                     <label class="form-check-label">Internal note</label>
                                 </div>
-                                <button class="btn btn-primary" type="submit" disabled="@isPostingMessage">
+                                <button class="btn btn-primary" type="button" @onclick="HandlePostUpdateClick" disabled="@isPostingMessage">
                                     @(isPostingMessage ? "Posting..." : "Post update")
                                 </button>
                             </EditForm>
@@ -269,6 +270,53 @@
                        OnCancel="HideConvertModal">
         <p>This will create a building announcement using the ticket details.</p>
     </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@showSaveModal"
+                       Title="@(IsUnassigning || IsAssigning ? "Confirm Assignment Change?" : "Save Changes?")"
+                       ConfirmButtonText="Yes, Save Changes"
+                       ConfirmButtonClass="@(IsUnassigning || IsAssigning ? "btn-warning" : "btn-primary")"
+                       HeaderClass="@(IsUnassigning || IsAssigning ? "bg-warning text-dark" : "")"
+                       OnConfirm="ConfirmSave"
+                       OnCancel="CancelSaveModal">
+        <p>Are you sure you want to save the following changes?</p>
+        @if (IsUnassigning)
+        {
+            <p class="text-warning fw-bold mt-2">You are unassigning this ticket.</p>
+        }
+        @if (IsAssigning)
+        {
+            <p class="text-info fw-bold mt-2">You are about to assign this ticket to @GetAssignTargetName().</p>
+        }
+    </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@showAssignToMeModal"
+                       Title="Assign to Me?"
+                       ConfirmButtonText="Yes, Assign to Me"
+                       ConfirmButtonClass="btn-primary"
+                       OnConfirm="ConfirmAssignToMe"
+                       OnCancel="CancelAssignToMeModal">
+        <p>Are you sure you want to assign this ticket to yourself?</p>
+    </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@showPostUpdateModal"
+                       Title="Post Update?"
+                       ConfirmButtonText="Yes, Post Update"
+                       ConfirmButtonClass="btn-primary"
+                       OnConfirm="ConfirmPostUpdate"
+                       OnCancel="CancelPostUpdateModal">
+        <p>Are you sure you would like to add an update to this ticket?</p>
+    </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@showPostInternalModal"
+                       Title="Post Internal Note?"
+                       ConfirmButtonText="Yes, Post Internal Note"
+                       ConfirmButtonClass="btn-warning"
+                       HeaderClass="bg-warning text-dark"
+                       OnConfirm="ConfirmPostInternal"
+                       OnCancel="CancelPostInternalModal">
+        <p>Are you sure you would like to add an internal note to this ticket?</p>
+        <p class="text-muted small mt-2">Internal notes are only visible to admins and will not be shown to the ticket creator.</p>
+    </ConfirmationModal>
 </AccessLevelView>
 
 @code {
@@ -286,14 +334,21 @@
     private readonly Dictionary<string, string> userNameCache = new();
 
     private TicketUpdateRequest updateModel = new();
+    private TicketUpdateRequest originalModel = new(); // For change tracking
     private TicketMessageCreateRequest messageModel = new();
     private DateOnly? resolvedDateValue;
+    private EditForm? updateForm;
+    private EditForm? messageForm;
 
     private bool isLoading = true;
     private bool isSavingTicket;
     private bool isPostingMessage;
     private bool isArchiveModalVisible;
     private bool isConvertModalVisible;
+    private bool showSaveModal;
+    private bool showAssignToMeModal;
+    private bool showPostUpdateModal;
+    private bool showPostInternalModal;
     private bool canUpdateTickets;
     private bool canDeleteTickets;
     private bool canCreateAnnouncements;
@@ -449,6 +504,22 @@
             ResolvedAt = ticket.ResolvedAt
         };
         
+        // Store original model for change tracking
+        originalModel = new TicketUpdateRequest
+        {
+            Id = updateModel.Id,
+            Title = updateModel.Title,
+            Description = updateModel.Description,
+            StatusId = updateModel.StatusId,
+            PriorityId = updateModel.PriorityId,
+            CategoryId = updateModel.CategoryId,
+            AssignedToUserId = updateModel.AssignedToUserId,
+            RelatedUserId = updateModel.RelatedUserId,
+            BuildingId = updateModel.BuildingId,
+            AnnouncementId = updateModel.AnnouncementId,
+            ResolvedAt = updateModel.ResolvedAt
+        };
+        
         // Set resolved date value for InputDate (convert DateTime? to DateOnly?)
         resolvedDateValue = ticket.ResolvedAt.HasValue 
             ? DateOnly.FromDateTime(ticket.ResolvedAt.Value) 
@@ -545,6 +616,93 @@
         messages.AddRange(result.Data);
     }
 
+    private bool HasChanges
+    {
+        get
+        {
+            return updateModel.Title != originalModel.Title ||
+                   updateModel.Description != originalModel.Description ||
+                   updateModel.StatusId != originalModel.StatusId ||
+                   updateModel.PriorityId != originalModel.PriorityId ||
+                   updateModel.CategoryId != originalModel.CategoryId ||
+                   updateModel.BuildingId != originalModel.BuildingId ||
+                   updateModel.AssignedToUserId != originalModel.AssignedToUserId ||
+                   updateModel.RelatedUserId != originalModel.RelatedUserId ||
+                   updateModel.ResolvedAt != originalModel.ResolvedAt ||
+                   resolvedDateValue != (originalModel.ResolvedAt.HasValue 
+                       ? DateOnly.FromDateTime(originalModel.ResolvedAt.Value) 
+                       : null);
+        }
+    }
+
+    private bool IsUnassigning
+    {
+        get
+        {
+            var originalAssigned = string.IsNullOrWhiteSpace(originalModel.AssignedToUserId) ? null : originalModel.AssignedToUserId;
+            var newAssigned = string.IsNullOrWhiteSpace(updateModel.AssignedToUserId) ? null : updateModel.AssignedToUserId;
+            return !string.IsNullOrEmpty(originalAssigned) && string.IsNullOrEmpty(newAssigned);
+        }
+    }
+
+    private bool IsAssigning
+    {
+        get
+        {
+            var originalAssigned = string.IsNullOrWhiteSpace(originalModel.AssignedToUserId) ? null : originalModel.AssignedToUserId;
+            var newAssigned = string.IsNullOrWhiteSpace(updateModel.AssignedToUserId) ? null : updateModel.AssignedToUserId;
+            return (string.IsNullOrEmpty(originalAssigned) && !string.IsNullOrEmpty(newAssigned)) ||
+                   (!string.IsNullOrEmpty(originalAssigned) && !string.IsNullOrEmpty(newAssigned) && originalAssigned != newAssigned);
+        }
+    }
+
+    private string GetAssignTargetName()
+    {
+        var assignedId = string.IsNullOrWhiteSpace(updateModel.AssignedToUserId) ? null : updateModel.AssignedToUserId;
+        if (string.IsNullOrEmpty(assignedId))
+        {
+            return "Unassigned";
+        }
+        
+        if (assignedId == userId)
+        {
+            return "yourself";
+        }
+        
+        return GetUserDisplayName(assignedId);
+    }
+
+    private void HandleSaveClick()
+    {
+        // If no changes, just navigate away (treat as cancel)
+        if (!HasChanges)
+        {
+            GoBack();
+            return;
+        }
+
+        // Validate form first
+        if (updateForm?.EditContext != null && !updateForm.EditContext.Validate())
+        {
+            // Form is invalid, let validation messages show
+            return;
+        }
+
+        // Show confirmation modal
+        showSaveModal = true;
+    }
+
+    private void CancelSaveModal()
+    {
+        showSaveModal = false;
+    }
+
+    private async Task ConfirmSave()
+    {
+        showSaveModal = false;
+        await HandleTicketUpdate();
+    }
+
     private async Task HandleTicketUpdate()
     {
         if (!canUpdateTickets)
@@ -588,6 +746,54 @@
         ToastService.ShowSuccess("Ticket updated.");
     }
 
+    private void HandlePostUpdateClick()
+    {
+        // Validate form first
+        if (messageForm?.EditContext != null && !messageForm.EditContext.Validate())
+        {
+            // Form is invalid, let validation messages show
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(messageModel.Body))
+        {
+            ToastService.ShowWarning("Update body cannot be empty.");
+            return;
+        }
+
+        // Show different modal based on whether it's an internal note
+        if (messageModel.IsInternal)
+        {
+            showPostInternalModal = true;
+        }
+        else
+        {
+            showPostUpdateModal = true;
+        }
+    }
+
+    private void CancelPostUpdateModal()
+    {
+        showPostUpdateModal = false;
+    }
+
+    private async Task ConfirmPostUpdate()
+    {
+        showPostUpdateModal = false;
+        await HandleMessageSubmit();
+    }
+
+    private void CancelPostInternalModal()
+    {
+        showPostInternalModal = false;
+    }
+
+    private async Task ConfirmPostInternal()
+    {
+        showPostInternalModal = false;
+        await HandleMessageSubmit();
+    }
+
     private async Task HandleMessageSubmit()
     {
         if (!canUpdateTickets || string.IsNullOrWhiteSpace(messageModel.Body))
@@ -595,6 +801,7 @@
             return;
         }
 
+        var wasInternal = messageModel.IsInternal;
         isPostingMessage = true;
         var result = await MessageHandler.CreateMessageAsync(messageModel);
         isPostingMessage = false;
@@ -606,12 +813,29 @@
         }
 
         messageModel.Body = string.Empty;
+        messageModel.IsInternal = false;
         await LoadMessagesAsync();
-        ToastService.ShowSuccess("Update posted.");
+        ToastService.ShowSuccess(wasInternal ? "Internal note posted." : "Update posted.");
     }
 
-    private async Task AssignToMe()
+    private void HandleAssignToMeClick()
     {
+        if (!canUpdateTickets || string.IsNullOrEmpty(userId))
+        {
+            return;
+        }
+
+        showAssignToMeModal = true;
+    }
+
+    private void CancelAssignToMeModal()
+    {
+        showAssignToMeModal = false;
+    }
+
+    private async Task ConfirmAssignToMe()
+    {
+        showAssignToMeModal = false;
         if (!canUpdateTickets || string.IsNullOrEmpty(userId))
         {
             return;

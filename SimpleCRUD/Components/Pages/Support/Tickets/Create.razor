@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 
+@using SimpleCRUD.Components.Reuseables.Dialogs
 @inject AuthenticationStateProvider AuthProvider
 @inject IdentityUserHandler<string> IdentityUserHandler
 @inject SupportTicketHandler TicketHandler
@@ -34,7 +35,7 @@
     }
     else
     {
-        <EditForm Model="@formModel" OnValidSubmit="HandleSubmit">
+        <EditForm Model="@formModel" OnValidSubmit="HandleSubmit" @ref="editForm">
             <DataAnnotationsValidator />
             <ValidationSummary class="text-danger" />
 
@@ -47,7 +48,7 @@
             <div class="mb-3">
                 <label class="form-label fw-semibold">Category</label>
                 <select class="form-select" @bind="formModel.CategoryId">
-                    <option value="">Select a category</option>
+                    <option value="" selected disabled hidden>Select a category</option>
                     @foreach (var category in categories)
                     {
                         <option value="@category.Id">@category.Name</option>
@@ -59,7 +60,7 @@
             <div class="mb-3">
                 <label class="form-label fw-semibold">Priority</label>
                 <select class="form-select" @bind="formModel.PriorityId">
-                    <option value="">Select priority</option>
+                    <option value="" selected disabled hidden>Select priority</option>
                     @foreach (var priority in priorities)
                     {
                         <option value="@priority.Id">@priority.Name</option>
@@ -79,13 +80,31 @@
             </div>
 
             <div class="d-flex gap-2 flex-wrap">
-                <button class="btn btn-primary" type="submit" disabled="@isSaving">
+                <button class="btn btn-primary" type="button" @onclick="HandleSubmitClick" disabled="@isSaving">
                     @(isSaving ? "Saving..." : "Submit Ticket")
                 </button>
-                <button class="btn btn-outline-secondary" type="button" @onclick="Cancel">Cancel</button>
+                <button class="btn btn-outline-secondary" type="button" @onclick="HandleCancel">Cancel</button>
             </div>
         </EditForm>
     }
+
+    <ConfirmationModal IsVisible="@showSubmitModal"
+                       Title="Submit Ticket?"
+                       ConfirmButtonText="Yes, Submit Ticket"
+                       ConfirmButtonClass="btn-primary"
+                       OnConfirm="ConfirmSubmit"
+                       OnCancel="CancelSubmitModal">
+        <p>Are you sure you want to submit this ticket? Once submitted, it will be visible to support staff.</p>
+    </ConfirmationModal>
+
+    <ConfirmationModal IsVisible="@showCancelModal"
+                       Title="Discard Changes?"
+                       ConfirmButtonText="Yes, Discard Changes"
+                       ConfirmButtonClass="btn-danger"
+                       OnConfirm="ConfirmCancel"
+                       OnCancel="CancelCancelModal">
+        <p>You have unsaved changes. Are you sure you want to cancel? All entered data will be lost.</p>
+    </ConfirmationModal>
 </AccessLevelView>
 
 @code {
@@ -94,6 +113,8 @@
     private readonly List<TicketStatus> statuses = new();
 
     private TicketCreateRequest formModel = new();
+    private TicketCreateRequest initialModel = new(); // Store initial state for change detection
+    private EditForm? editForm;
     private bool isLoading = true;
     private bool isSaving;
     private bool canCreateTickets;
@@ -101,6 +122,8 @@
     private string? userId;
     private int buildingId;
     private string defaultStatusName = "Open";
+    private bool showSubmitModal;
+    private bool showCancelModal;
 
     protected override async Task OnInitializedAsync()
     {
@@ -127,6 +150,18 @@
             formModel.CreatedByUserId = userId;
             formModel.BuildingId = buildingId;
         }
+
+        // Store initial state after all defaults are set
+        initialModel = new TicketCreateRequest
+        {
+            Title = formModel.Title,
+            Description = formModel.Description,
+            CategoryId = formModel.CategoryId,
+            PriorityId = formModel.PriorityId,
+            StatusId = formModel.StatusId,
+            CreatedByUserId = formModel.CreatedByUserId,
+            BuildingId = formModel.BuildingId
+        };
 
         isLoading = false;
     }
@@ -187,6 +222,30 @@
         }
     }
 
+    private void HandleSubmitClick()
+    {
+        // Validate form first
+        if (editForm?.EditContext != null && !editForm.EditContext.Validate())
+        {
+            // Form is invalid, let validation messages show
+            return;
+        }
+
+        // Form is valid, show confirmation modal
+        showSubmitModal = true;
+    }
+
+    private void CancelSubmitModal()
+    {
+        showSubmitModal = false;
+    }
+
+    private async Task ConfirmSubmit()
+    {
+        showSubmitModal = false;
+        await HandleSubmit();
+    }
+
     private async Task HandleSubmit()
     {
         if (string.IsNullOrEmpty(userId))
@@ -211,6 +270,33 @@
         NavManager.NavigateTo($"/support/my-tickets/{ticket.Id}");
     }
 
-    private void Cancel() => NavManager.NavigateTo("/support/my-tickets");
+    private void HandleCancel()
+    {
+        // Check if user has made any changes from the initial state
+        var hasChanges = !string.IsNullOrWhiteSpace(formModel.Title) || 
+                        !string.IsNullOrWhiteSpace(formModel.Description) ||
+                        formModel.CategoryId != initialModel.CategoryId ||
+                        formModel.PriorityId != initialModel.PriorityId;
+        
+        if (hasChanges)
+        {
+            showCancelModal = true;
+        }
+        else
+        {
+            NavManager.NavigateTo("/support/my-tickets");
+        }
+    }
+
+    private void CancelCancelModal()
+    {
+        showCancelModal = false;
+    }
+
+    private void ConfirmCancel()
+    {
+        showCancelModal = false;
+        NavManager.NavigateTo("/support/my-tickets");
+    }
 }
 

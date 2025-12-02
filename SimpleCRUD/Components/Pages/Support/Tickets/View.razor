@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 
+@using SimpleCRUD.Components.Reuseables.Dialogs
 @inject AuthenticationStateProvider AuthProvider
 @inject SupportTicketHandler TicketHandler
 @inject SupportTicketMessageHandler MessageHandler
@@ -96,14 +97,14 @@
                     <h3 class="h5 mb-0">Add an update</h3>
                 </div>
                 <div class="card-body">
-                    <EditForm Model="@messageModel" OnValidSubmit="HandleMessageSubmit">
+                    <EditForm Model="@messageModel" OnValidSubmit="HandleMessageSubmit" @ref="messageForm">
                         <DataAnnotationsValidator />
                         <ValidationSummary class="text-danger" />
                         <div class="mb-3">
                             <InputTextArea class="form-control" rows="4" @bind-Value="messageModel.Body" />
                             <ValidationMessage For="@(() => messageModel.Body)" />
                         </div>
-                        <button class="btn btn-primary" type="submit" disabled="@isPosting">
+                        <button class="btn btn-primary" type="button" @onclick="HandlePostUpdateClick" disabled="@isPosting">
                             @(isPosting ? "Sending..." : "Post update")
                         </button>
                     </EditForm>
@@ -113,6 +114,15 @@
 
         <button class="btn btn-outline-secondary" @onclick="GoBack">Back to tickets</button>
     }
+
+    <ConfirmationModal IsVisible="@showPostUpdateModal"
+                       Title="Post Update?"
+                       ConfirmButtonText="Yes, Post Update"
+                       ConfirmButtonClass="btn-primary"
+                       OnConfirm="ConfirmPostUpdate"
+                       OnCancel="CancelPostUpdateModal">
+        <p>Are you sure you would like to add an update to this ticket?</p>
+    </ConfirmationModal>
 </AccessLevelView>
 
 @code {
@@ -126,12 +136,14 @@
     private readonly Dictionary<string, string> userNameCache = new();
 
     private TicketMessageCreateRequest messageModel = new();
+    private EditForm? messageForm;
     private bool isLoading = true;
     private bool isPosting;
     private string? loadError;
     private string? userId;
     private string assignedDisplayName = "Unassigned";
     private bool canPostMessages;
+    private bool showPostUpdateModal;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -227,6 +239,36 @@
 
         messages.Clear();
         messages.AddRange(result.Data);
+    }
+
+    private void HandlePostUpdateClick()
+    {
+        // Validate form first
+        if (messageForm?.EditContext != null && !messageForm.EditContext.Validate())
+        {
+            // Form is invalid, let validation messages show
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(messageModel.Body))
+        {
+            ToastService.ShowWarning("Update body cannot be empty.");
+            return;
+        }
+
+        // Show confirmation modal
+        showPostUpdateModal = true;
+    }
+
+    private void CancelPostUpdateModal()
+    {
+        showPostUpdateModal = false;
+    }
+
+    private async Task ConfirmPostUpdate()
+    {
+        showPostUpdateModal = false;
+        await HandleMessageSubmit();
     }
 
     private async Task HandleMessageSubmit()
