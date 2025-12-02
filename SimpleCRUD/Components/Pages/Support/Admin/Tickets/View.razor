@@ -137,7 +137,7 @@
                                             <option value="">Unassigned</option>
                                             @foreach (var admin in admins)
                                             {
-                                                <option value="@admin.ID">@admin.UserName ?? admin.Email ?? admin.ID</option>
+                                                <option value="@admin.ID">@(admin.UserName ?? admin.Email ?? admin.ID)</option>
                                             }
                                         </select>
                                     </div>
@@ -150,13 +150,16 @@
                                             <option value="">None</option>
                                             @foreach (var tenant in tenants)
                                             {
-                                                <option value="@tenant.ID">@tenant.UserName ?? tenant.Email ?? tenant.ID</option>
+                                                <option value="@tenant.ID">@(tenant.UserName ?? tenant.Email ?? tenant.ID)</option>
                                             }
                                         </select>
                                     </div>
                                     <div class="col-12 col-md-6">
                                         <label class="form-label">Resolve date (optional)</label>
-                                        <InputDate class="form-control" @bind-Value="updateModel.ResolvedAt" />
+                                        <InputDate class="form-control" 
+                                                   @bind-Value="resolvedDateValue" 
+                                                   min="@DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd")" />
+                                        <small class="form-text text-muted">Leave empty to clear resolved date</small>
                                     </div>
                                 </div>
 
@@ -284,6 +287,7 @@
 
     private TicketUpdateRequest updateModel = new();
     private TicketMessageCreateRequest messageModel = new();
+    private DateOnly? resolvedDateValue;
 
     private bool isLoading = true;
     private bool isSavingTicket;
@@ -330,6 +334,49 @@
         
         // Ensure all user IDs from ticket and messages are in the cache
         await EnsureUsersInCacheAsync();
+        
+        // Ensure the currently assigned admin is in the dropdown list
+        await EnsureAssignedAdminInListAsync();
+    }
+
+    private async Task EnsureAssignedAdminInListAsync()
+    {
+        // Ensure the currently assigned admin is in the list
+        // This handles cases where the assigned admin might not be in GetAll() results
+        if (ticket is not null && !string.IsNullOrEmpty(ticket.AssignedToUserId))
+        {
+            var assignedAdminExists = admins.Any(a => a.ID == ticket.AssignedToUserId);
+            if (!assignedAdminExists)
+            {
+                // Try to find the assigned admin user and add them to the list
+                try
+                {
+                    var assignedUser = await UserManager.FindByIdAsync(ticket.AssignedToUserId);
+                    if (assignedUser is not null)
+                    {
+                        // Add to admins list (if they're assigned to a ticket, they're likely an admin)
+                        var adminUser = new User
+                        {
+                            ID = assignedUser.Id,
+                            UserName = assignedUser.UserName,
+                            Email = assignedUser.Email,
+                            AccessLevelId = 2 // Assume admin level if assigned
+                        };
+                        admins.Add(adminUser);
+                        
+                        // Update cache
+                        if (!userNameCache.ContainsKey(assignedUser.Id))
+                        {
+                            userNameCache[assignedUser.Id] = assignedUser.UserName ?? assignedUser.Email ?? assignedUser.Id;
+                        }
+                    }
+                }
+                catch
+                {
+                    // If lookup fails, continue without adding
+                }
+            }
+        }
     }
 
     private async Task EnsureUsersInCacheAsync()
@@ -401,6 +448,11 @@
             AnnouncementId = ticket.AnnouncementId,
             ResolvedAt = ticket.ResolvedAt
         };
+        
+        // Set resolved date value for InputDate (convert DateTime? to DateOnly?)
+        resolvedDateValue = ticket.ResolvedAt.HasValue 
+            ? DateOnly.FromDateTime(ticket.ResolvedAt.Value) 
+            : null;
 
         messageModel = new TicketMessageCreateRequest
         {
@@ -498,6 +550,27 @@
         if (!canUpdateTickets)
         {
             return;
+        }
+
+        // Convert DateOnly? back to DateTime? for the update model
+        updateModel.ResolvedAt = resolvedDateValue.HasValue 
+            ? resolvedDateValue.Value.ToDateTime(TimeOnly.MinValue) 
+            : null;
+
+        // Convert empty strings to null for optional user ID fields (stored procedure expects NULL, not empty string)
+        if (string.IsNullOrWhiteSpace(updateModel.AssignedToUserId))
+        {
+            updateModel.AssignedToUserId = null;
+        }
+        if (string.IsNullOrWhiteSpace(updateModel.RelatedUserId))
+        {
+            updateModel.RelatedUserId = null;
+        }
+
+        // Ensure the ticket ID is preserved (in case it was lost)
+        if (ticket is not null)
+        {
+            updateModel.Id = ticket.Id;
         }
 
         isSavingTicket = true;

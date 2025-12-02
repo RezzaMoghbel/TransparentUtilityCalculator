@@ -94,7 +94,7 @@
                         <option value="">Unassigned</option>
                         @foreach (var admin in admins)
                         {
-                            <option value="@admin.ID">@admin.UserName ?? admin.Email ?? admin.ID</option>
+                            <option value="@admin.ID">@(admin.UserName ?? admin.Email ?? admin.ID)</option>
                         }
                     </select>
                 </div>
@@ -104,7 +104,7 @@
                         <option value="">None</option>
                         @foreach (var user in tenants)
                         {
-                            <option value="@user.ID">@user.UserName ?? user.Email ?? user.ID</option>
+                            <option value="@user.ID">@(user.UserName ?? user.Email ?? user.ID)</option>
                         }
                     </select>
                 </div>
