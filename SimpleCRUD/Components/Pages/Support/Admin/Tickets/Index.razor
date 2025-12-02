@@ -297,6 +297,45 @@
         tickets.Clear();
         tickets.AddRange(result.Data);
         totalCount = tickets.FirstOrDefault()?.TotalCount ?? tickets.Count;
+
+        // Ensure all user IDs from tickets are in the cache
+        await EnsureUsersInCacheAsync();
+    }
+
+    private async Task EnsureUsersInCacheAsync()
+    {
+        var userIdsToCheck = new HashSet<string>();
+        
+        foreach (var ticket in tickets)
+        {
+            if (!string.IsNullOrEmpty(ticket.CreatedByUserId) && !userNameCache.ContainsKey(ticket.CreatedByUserId))
+            {
+                userIdsToCheck.Add(ticket.CreatedByUserId);
+            }
+            if (!string.IsNullOrEmpty(ticket.AssignedToUserId) && !userNameCache.ContainsKey(ticket.AssignedToUserId))
+            {
+                userIdsToCheck.Add(ticket.AssignedToUserId);
+            }
+        }
+
+        foreach (var userId in userIdsToCheck)
+        {
+            try
+            {
+                var user = await UserManager.FindByIdAsync(userId);
+                if (user is not null)
+                {
+                    userNameCache[userId] = !string.IsNullOrWhiteSpace(user.UserName)
+                        ? user.UserName!
+                        : (!string.IsNullOrWhiteSpace(user.Email) ? user.Email! : userId);
+                }
+            }
+            catch
+            {
+                // If lookup fails, cache the ID as fallback
+                userNameCache[userId] = userId;
+            }
+        }
     }
 
     private async Task OnPageChanged(int newPage)
@@ -366,8 +405,42 @@
     private string GetBuildingName(int id)
         => buildings.FirstOrDefault(b => b.Id == id)?.Name ?? $"Building {id}";
 
+    private async Task<string> GetUserDisplayNameAsync(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return "Unassigned";
+        }
+
+        if (userNameCache.TryGetValue(id, out var name))
+        {
+            return name;
+        }
+
+        // Try to fetch the user if not in cache
+        try
+        {
+            var user = await UserManager.FindByIdAsync(id);
+            if (user is not null)
+            {
+                var displayName = !string.IsNullOrWhiteSpace(user.UserName)
+                    ? user.UserName!
+                    : (!string.IsNullOrWhiteSpace(user.Email) ? user.Email! : id);
+                userNameCache[id] = displayName;
+                return displayName;
+            }
+        }
+        catch
+        {
+            // If lookup fails, fall back to ID
+        }
+
+        return id;
+    }
+
     private string GetUserDisplayName(string? id)
     {
+        // Synchronous version for immediate display (may show ID if not cached)
         if (string.IsNullOrEmpty(id))
         {
             return "Unassigned";

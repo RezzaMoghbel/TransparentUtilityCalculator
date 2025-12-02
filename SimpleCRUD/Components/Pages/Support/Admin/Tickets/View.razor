@@ -327,6 +327,57 @@
         ticket = ticketResult.Data;
         PopulateUpdateModel();
         await LoadMessagesAsync();
+        
+        // Ensure all user IDs from ticket and messages are in the cache
+        await EnsureUsersInCacheAsync();
+    }
+
+    private async Task EnsureUsersInCacheAsync()
+    {
+        var userIdsToCheck = new HashSet<string>();
+        
+        if (ticket is not null)
+        {
+            if (!string.IsNullOrEmpty(ticket.CreatedByUserId) && !userNameCache.ContainsKey(ticket.CreatedByUserId))
+            {
+                userIdsToCheck.Add(ticket.CreatedByUserId);
+            }
+            if (!string.IsNullOrEmpty(ticket.AssignedToUserId) && !userNameCache.ContainsKey(ticket.AssignedToUserId))
+            {
+                userIdsToCheck.Add(ticket.AssignedToUserId);
+            }
+            if (!string.IsNullOrEmpty(ticket.RelatedUserId) && !userNameCache.ContainsKey(ticket.RelatedUserId))
+            {
+                userIdsToCheck.Add(ticket.RelatedUserId);
+            }
+        }
+
+        foreach (var message in messages)
+        {
+            if (!string.IsNullOrEmpty(message.CreatedByUserId) && !userNameCache.ContainsKey(message.CreatedByUserId))
+            {
+                userIdsToCheck.Add(message.CreatedByUserId);
+            }
+        }
+
+        foreach (var userId in userIdsToCheck)
+        {
+            try
+            {
+                var user = await UserManager.FindByIdAsync(userId);
+                if (user is not null)
+                {
+                    userNameCache[userId] = !string.IsNullOrWhiteSpace(user.UserName)
+                        ? user.UserName!
+                        : (!string.IsNullOrWhiteSpace(user.Email) ? user.Email! : userId);
+                }
+            }
+            catch
+            {
+                // If lookup fails, cache the ID as fallback
+                userNameCache[userId] = userId;
+            }
+        }
     }
 
     private void PopulateUpdateModel()
@@ -594,8 +645,42 @@
     private string GetBuildingName(int buildingId)
         => buildings.FirstOrDefault(b => b.Id == buildingId)?.Name ?? $"Building {buildingId}";
 
+    private async Task<string> GetUserDisplayNameAsync(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return "Unassigned";
+        }
+
+        if (userNameCache.TryGetValue(id, out var name))
+        {
+            return name;
+        }
+
+        // Try to fetch the user if not in cache
+        try
+        {
+            var user = await UserManager.FindByIdAsync(id);
+            if (user is not null)
+            {
+                var displayName = !string.IsNullOrWhiteSpace(user.UserName)
+                    ? user.UserName!
+                    : (!string.IsNullOrWhiteSpace(user.Email) ? user.Email! : id);
+                userNameCache[id] = displayName;
+                return displayName;
+            }
+        }
+        catch
+        {
+            // If lookup fails, fall back to ID
+        }
+
+        return id;
+    }
+
     private string GetUserDisplayName(string? id)
     {
+        // Synchronous version for immediate display (may show ID if not cached)
         if (string.IsNullOrEmpty(id))
         {
             return "Unassigned";
@@ -610,7 +695,16 @@
     }
 
     private string GetAuthorName(string authorId)
-        => GetUserDisplayName(authorId);
+    {
+        // Check if the author is the current user
+        if (userId != null && string.Equals(authorId, userId, StringComparison.OrdinalIgnoreCase))
+        {
+            return "You";
+        }
+
+        // Otherwise return the username
+        return GetUserDisplayName(authorId);
+    }
 
     private void GoBack() => NavManager.NavigateTo("/support/admin/tickets");
 }
